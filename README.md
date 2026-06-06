@@ -181,4 +181,4 @@ Também são aceitos termos em inglês como `income`, `expense`, `completed` e `
 
 ## Licença
 
-Projeto privado em desenvolvimento. Defina uma licença antes de publicar em repositório público.
+Projeto privado em desenvolvimento.
