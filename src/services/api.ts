@@ -1,0 +1,113 @@
+import type { Category, MonthlyPoint, Settings, Stats, Transaction, User } from "@/data/types";
+
+const API_URL = import.meta.env.VITE_API_URL ?? "/api";
+
+export class ApiError extends Error {
+  status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.status = status;
+  }
+}
+
+async function request<T>(path: string, options: RequestInit = {}, token?: string | null): Promise<T> {
+  const response = await fetch(`${API_URL}${path}`, {
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(options.headers ?? {}),
+    },
+  });
+
+  if (!response.ok) {
+    let message = "Erro ao comunicar com a API.";
+    try {
+      const data = (await response.json()) as { message?: string };
+      message = data.message ?? message;
+    } catch {
+      // mantém mensagem padrão
+    }
+    throw new ApiError(message, response.status);
+  }
+
+  if (response.status === 204) return undefined as T;
+  return response.json() as Promise<T>;
+}
+
+export const api = {
+  login: (email: string, password: string) =>
+    request<{ token: string; user: User }>("/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ email, password }),
+    }),
+
+  register: (name: string, email: string, password: string) =>
+    request<{ token: string; user: User }>("/auth/register", {
+      method: "POST",
+      body: JSON.stringify({ name, email, password }),
+    }),
+
+  me: (token: string) => request<{ user: User }>("/auth/me", {}, token),
+
+  getTransactions: (token: string) => request<{ transactions: Transaction[] }>("/transactions", {}, token),
+
+  createTransaction: (token: string, transaction: Omit<Transaction, "id">) =>
+    request<{ transaction: Transaction }>("/transactions", {
+      method: "POST",
+      body: JSON.stringify(transaction),
+    }, token),
+
+  deleteTransaction: (token: string, id: string) =>
+    request<void>(`/transactions/${id}`, { method: "DELETE" }, token),
+
+  clearTransactions: (token: string) =>
+    request<void>("/transactions", { method: "DELETE" }, token),
+
+  getCategories: (token: string) => request<{ categories: Category[] }>("/categories", {}, token),
+
+  createCategory: (token: string, category: Omit<Category, "id" | "spent">) =>
+    request<{ category: Category }>("/categories", {
+      method: "POST",
+      body: JSON.stringify(category),
+    }, token),
+
+  updateCategory: (token: string, id: string, category: Partial<Omit<Category, "id" | "spent">>) =>
+    request<{ category: Category }>(`/categories/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(category),
+    }, token),
+
+  deleteCategory: (token: string, id: string) =>
+    request<void>(`/categories/${id}`, { method: "DELETE" }, token),
+
+  getSettings: (token: string) => request<{ settings: Settings }>("/settings", {}, token),
+
+  updateSettings: (token: string, settings: Partial<Settings>) =>
+    request<{ settings: Settings }>("/settings", {
+      method: "PATCH",
+      body: JSON.stringify(settings),
+    }, token),
+
+  getSummary: (token: string) =>
+    request<{
+      stats: Stats;
+      monthly: MonthlyPoint[];
+      categories: Category[];
+      recentTransactions: Transaction[];
+    }>("/summary", {}, token),
+
+  getPlans: (token: string) =>
+    request<{ plans: Array<{ id: User["plan"]; name: string; price: number; features: string[] }> }>("/billing/plans", {}, token),
+
+  updatePlan: (token: string, plan: User["plan"]) =>
+    request<{ user: User }>("/billing/plan", {
+      method: "PATCH",
+      body: JSON.stringify({ plan }),
+    }, token),
+};
+
+export function getCsvExportUrl() {
+  return `${API_URL}/export/csv`;
+}
