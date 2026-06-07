@@ -19,5 +19,12 @@ export function BrandMark({ className, letterClassName }: BrandMarkProps) {
 }
 
 export function BrandName({ className }: { className?: string }) {
-  return <span className={cn("font-semibold", className)}>DENARIUS</span>;
+  return (
+    <span
+      aria-label="DENARIUS"
+      className={cn("font-brand text-[30px] font-normal lowercase leading-none tracking-normal", className)}
+    >
+      denarius
+    </span>
+  );
 }

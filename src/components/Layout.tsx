@@ -209,7 +209,7 @@ export function Layout({
         <div className="h-16 flex items-center justify-between px-4 flex-shrink-0">
           <button onClick={() => goTo("dashboard")} className="flex items-center gap-3 min-w-0">
             <BrandMark className="w-9 h-9 rounded-xl bg-white/10 text-white flex-shrink-0" letterClassName="text-3xl" />
-            {(!collapsed || mobileOpen) && <BrandName className="text-white text-[17px]" />}
+            {(!collapsed || mobileOpen) && <BrandName className="text-white text-[30px]" />}
           </button>
           <SidebarToggleButton
             open={mobileOpen}
