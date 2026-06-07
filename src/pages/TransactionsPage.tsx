@@ -1,9 +1,10 @@
 import { useMemo, useRef, useState, type ChangeEvent } from "react";
-import { IconArrowDown, IconArrowUp, IconDownload, IconSearch, IconTrash } from "@/components/Icons";
+import { IconArrowDown, IconArrowUp, IconCheck, IconCopy, IconDownload, IconEdit, IconSearch, IconTrash } from "@/components/Icons";
 import type { Category, Stats, Transaction } from "@/data/types";
 import { formatCurrency, formatDateFull } from "@/data/types";
 import type { TransactionInput } from "@/hooks/useFinanceApp";
 import { cn } from "@/utils/cn";
+import { parseAmount, parseCsvTransactions } from "@/utils/csv";
 import { calculateStats, downloadCsv, exportPdf } from "@/utils/finance";
 
 interface TransactionsPageProps {
@@ -13,112 +14,16 @@ interface TransactionsPageProps {
   currency: string;
   selectedMonthLabel: string;
   onImport: (transactions: TransactionInput[]) => Promise<void>;
+  onEdit: (transaction: Transaction) => void;
+  onDuplicate: (id: string) => Promise<void>;
+  onToggleStatus: (id: string) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
 }
 
 type TypeFilter = "all" | "income" | "expense";
 type StatusFilter = "all" | "completed" | "pending";
 
-function parseAmount(value: string) {
-  const clean = value.replace(/[^\d,.-]/g, "").trim();
-  if (!clean) return Number.NaN;
-  if (clean.includes(",")) return Number(clean.replace(/\./g, "").replace(",", "."));
-  return Number(clean);
-}
-
-function normalizeHeader(value: string) {
-  return value
-    .trim()
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]/g, "");
-}
-
-function splitCsvLine(line: string, separator: string) {
-  const values: string[] = [];
-  let current = "";
-  let quoted = false;
-
-  for (let index = 0; index < line.length; index += 1) {
-    const char = line[index];
-    const next = line[index + 1];
-
-    if (char === "\"" && quoted && next === "\"") {
-      current += "\"";
-      index += 1;
-    } else if (char === "\"") {
-      quoted = !quoted;
-    } else if (char === separator && !quoted) {
-      values.push(current.trim());
-      current = "";
-    } else {
-      current += char;
-    }
-  }
-
-  values.push(current.trim());
-  return values;
-}
-
-function normalizeDate(value: string) {
-  const text = value.trim();
-  if (/^\d{4}-\d{2}-\d{2}$/.test(text)) return text;
-
-  const brDate = text.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-  if (brDate) {
-    const [, day, month, year] = brDate;
-    return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
-  }
-
-  const parsed = new Date(text);
-  if (!Number.isNaN(parsed.getTime())) return parsed.toISOString().slice(0, 10);
-  return "";
-}
-
-function parseType(value: string): "income" | "expense" {
-  const text = normalizeHeader(value);
-  return ["income", "receita", "entrada", "credito"].includes(text) ? "income" : "expense";
-}
-
-function parseStatus(value: string): "completed" | "pending" {
-  const text = normalizeHeader(value);
-  return ["pending", "pendente", "aberto"].includes(text) ? "pending" : "completed";
-}
-
-function parseCsvTransactions(text: string): TransactionInput[] {
-  const lines = text.split(/\r?\n/).map(line => line.trim()).filter(Boolean);
-  if (lines.length < 2) return [];
-
-  const separator = lines[0].includes(";") ? ";" : ",";
-  const headers = splitCsvLine(lines[0], separator).map(normalizeHeader);
-  const indexOf = (...names: string[]) => names.map(name => headers.indexOf(name)).find(index => index >= 0) ?? -1;
-  const indexes = {
-    date: indexOf("data", "date"),
-    description: indexOf("descricao", "description", "desc"),
-    type: indexOf("tipo", "type"),
-    category: indexOf("categoria", "category"),
-    status: indexOf("status", "situacao"),
-    amount: indexOf("valor", "amount", "preco"),
-  };
-
-  return lines.slice(1).map(line => {
-    const values = splitCsvLine(line, separator);
-    const get = (index: number) => index >= 0 ? values[index] ?? "" : "";
-    const amount = Math.abs(parseAmount(get(indexes.amount)));
-
-    return {
-      date: normalizeDate(get(indexes.date)),
-      description: get(indexes.description),
-      type: parseType(get(indexes.type)),
-      category: get(indexes.category) || "Importado",
-      status: parseStatus(get(indexes.status)),
-      amount,
-    };
-  }).filter(item => item.date && item.description && Number.isFinite(item.amount) && item.amount > 0);
-}
-
-export function TransactionsPage({ transactions, stats, categories, currency, selectedMonthLabel, onImport, onDelete }: TransactionsPageProps) {
+export function TransactionsPage({ transactions, stats, categories, currency, selectedMonthLabel, onImport, onEdit, onDuplicate, onToggleStatus, onDelete }: TransactionsPageProps) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("all");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
@@ -268,7 +173,7 @@ export function TransactionsPage({ transactions, stats, categories, currency, se
       </div>
 
       <div className="bg-card border border-border rounded-2xl overflow-hidden">
-        <div className="hidden sm:grid grid-cols-[1fr_120px_120px_120px_44px] gap-4 px-5 py-3 border-b border-border bg-surface text-[11px] font-medium text-gray-400 uppercase">
+        <div className="hidden sm:grid grid-cols-[1fr_120px_120px_120px_144px] gap-4 px-5 py-3 border-b border-border bg-surface text-[11px] font-medium text-gray-400 uppercase">
           <span>Descrição</span><span>Categoria</span><span>Data</span><span className="text-right">Valor</span><span />
         </div>
         <div className="divide-y divide-border">
@@ -276,7 +181,7 @@ export function TransactionsPage({ transactions, stats, categories, currency, se
             <div key={group.date}>
               <div className="px-4 sm:px-5 py-2 bg-surface text-[11px] font-semibold text-gray-400 capitalize">{formatDateFull(group.date)}</div>
               {group.items.map(transaction => (
-                <div key={transaction.id} className={cn("grid grid-cols-[1fr_auto] sm:grid-cols-[1fr_120px_120px_120px_44px] gap-3 sm:gap-4 px-4 sm:px-5 py-4 items-center transition-all", deletingId === transaction.id ? "opacity-30 scale-[0.99]" : "hover:bg-gray-50/50")}>
+                <div key={transaction.id} className={cn("grid grid-cols-[1fr_auto] sm:grid-cols-[1fr_120px_120px_120px_144px] gap-3 sm:gap-4 px-4 sm:px-5 py-4 items-center transition-all", deletingId === transaction.id ? "opacity-30 scale-[0.99]" : "hover:bg-gray-50/50")}>
                   <div className="flex items-center gap-3 min-w-0">
                     <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0", transaction.type === "income" ? "bg-success-50" : "bg-danger-50")}>{transaction.type === "income" ? <IconArrowUp size={16} className="text-success-600" /> : <IconArrowDown size={16} className="text-danger-500" />}</div>
                     <div className="min-w-0">
@@ -288,7 +193,12 @@ export function TransactionsPage({ transactions, stats, categories, currency, se
                   <span className="hidden sm:block text-[12px] text-gray-500 truncate">{transaction.category}</span>
                   <span className="hidden sm:block text-[12px] text-gray-400">{formatDateFull(transaction.date)}</span>
                   <span className={cn("text-[13px] font-semibold tabular-nums text-right", transaction.type === "income" ? "text-success-600" : "text-gray-700")}>{transaction.type === "income" ? "+" : "-"} {formatCurrency(transaction.amount, currency)}</span>
-                  <button onClick={() => void remove(transaction.id)} className="flex w-8 h-8 items-center justify-center rounded-lg text-gray-300 hover:text-danger-500 hover:bg-danger-50 transition-all" aria-label="Remover transação"><IconTrash size={15} /></button>
+                  <div className="flex items-center justify-end gap-1">
+                    <button onClick={() => void onToggleStatus(transaction.id)} className="flex w-8 h-8 items-center justify-center rounded-lg text-gray-300 hover:text-success-600 hover:bg-success-50 transition-all" aria-label="Alternar status"><IconCheck size={15} /></button>
+                    <button onClick={() => onEdit(transaction)} className="flex w-8 h-8 items-center justify-center rounded-lg text-gray-300 hover:text-brand-600 hover:bg-brand-50 transition-all" aria-label="Editar transação"><IconEdit size={15} /></button>
+                    <button onClick={() => void onDuplicate(transaction.id)} className="flex w-8 h-8 items-center justify-center rounded-lg text-gray-300 hover:text-gray-700 hover:bg-gray-100 transition-all" aria-label="Duplicar transação"><IconCopy size={15} /></button>
+                    <button onClick={() => void remove(transaction.id)} className="flex w-8 h-8 items-center justify-center rounded-lg text-gray-300 hover:text-danger-500 hover:bg-danger-50 transition-all" aria-label="Remover transação"><IconTrash size={15} /></button>
+                  </div>
                 </div>
               ))}
             </div>

@@ -1,7 +1,9 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   type AppNotification,
+  type BackupSnapshot,
   DEFAULT_SETTINGS,
+  type DenariusBackup,
   INITIAL_CATEGORIES,
   type Category,
   type MonthlyClosure,
@@ -12,7 +14,9 @@ import {
   type Transaction,
   type User,
 } from "@/data/types";
+import { createBackupSnapshot, downloadBackupFile, parseBackupFile } from "@/utils/backup";
 import { applyCategorySpent, calculateMonthlyData, calculateStats, filterTransactionsByMonth, formatMonthLabel, getDateInMonth, getMonthKey, shiftMonth } from "@/utils/finance";
+import { createSalt, hashSecret, verifySecret } from "@/utils/security";
 import {
   authenticateLocalAccount,
   createLocalAccount,
@@ -23,7 +27,7 @@ import {
 import { readLocalStorage, writeLocalStorage } from "@/utils/localStore";
 
 type Mode = "api" | "local";
-type WorkspaceResource = "transactions" | "categories" | "settings" | "notifications" | "monthlyGoals" | "monthlyClosures" | "recurringTransactions";
+type WorkspaceResource = "transactions" | "categories" | "settings" | "notifications" | "monthlyGoals" | "monthlyClosures" | "recurringTransactions" | "backupSnapshots";
 
 const TOKEN_KEY = "fluxo.token";
 const MODE_KEY = "fluxo.mode";
@@ -38,6 +42,7 @@ interface WorkspaceData {
   monthlyGoals: MonthlyGoal[];
   monthlyClosures: MonthlyClosure[];
   recurringTransactions: RecurringTransaction[];
+  backupSnapshots: BackupSnapshot[];
 }
 
 export interface TransactionInput {
@@ -66,7 +71,21 @@ export interface RecurringTransactionInput {
   active: boolean;
 }
 
+export interface OnboardingInput {
+  currency: Settings["currency"];
+  savingsTarget: number;
+  spendingLimit: number;
+  notes: string;
+}
+
 const createInitialCategories = () => INITIAL_CATEGORIES.map(category => ({ ...category, spent: 0 }));
+
+const normalizeSettings = (settings: Partial<Settings> | undefined): Settings => ({
+  ...DEFAULT_SETTINGS,
+  ...settings,
+  autoLockMinutes: settings?.autoLockMinutes ?? DEFAULT_SETTINGS.autoLockMinutes,
+  onboardingCompleted: settings?.onboardingCompleted ?? DEFAULT_SETTINGS.onboardingCompleted,
+});
 
 function ensureCategoryList(categories: Category[], categoryNames: string[]) {
   const existing = new Set(categories.map(category => category.name));
@@ -90,20 +109,23 @@ function readWorkspace(user: User | null): WorkspaceData {
       monthlyGoals: [],
       monthlyClosures: [],
       recurringTransactions: [],
+      backupSnapshots: [],
     };
   }
 
   const transactions = readLocalStorage<Transaction[]>(workspaceKey(user.id, "transactions"), []);
   const categories = readLocalStorage<Category[]>(workspaceKey(user.id, "categories"), createInitialCategories());
+  const settings = normalizeSettings(readLocalStorage<Partial<Settings>>(workspaceKey(user.id, "settings"), DEFAULT_SETTINGS));
 
   return {
     transactions,
     categories: applyCategorySpent(categories, transactions),
-    settings: readLocalStorage<Settings>(workspaceKey(user.id, "settings"), { ...DEFAULT_SETTINGS }),
+    settings,
     notifications: readLocalStorage<AppNotification[]>(workspaceKey(user.id, "notifications"), []),
     monthlyGoals: readLocalStorage<MonthlyGoal[]>(workspaceKey(user.id, "monthlyGoals"), []),
     monthlyClosures: readLocalStorage<MonthlyClosure[]>(workspaceKey(user.id, "monthlyClosures"), []),
     recurringTransactions: readLocalStorage<RecurringTransaction[]>(workspaceKey(user.id, "recurringTransactions"), []),
+    backupSnapshots: readLocalStorage<BackupSnapshot[]>(workspaceKey(user.id, "backupSnapshots"), []),
   };
 }
 
@@ -135,6 +157,10 @@ function writeWorkspace(user: User, workspace: Partial<WorkspaceData>) {
   if (workspace.recurringTransactions !== undefined) {
     writeLocalStorage(workspaceKey(user.id, "recurringTransactions"), workspace.recurringTransactions);
   }
+
+  if (workspace.backupSnapshots !== undefined) {
+    writeLocalStorage(workspaceKey(user.id, "backupSnapshots"), workspace.backupSnapshots);
+  }
 }
 
 export function useFinanceApp() {
@@ -151,6 +177,8 @@ export function useFinanceApp() {
   const [monthlyGoals, setMonthlyGoals] = useState<MonthlyGoal[]>(activeWorkspace.monthlyGoals);
   const [monthlyClosures, setMonthlyClosures] = useState<MonthlyClosure[]>(activeWorkspace.monthlyClosures);
   const [recurringTransactions, setRecurringTransactions] = useState<RecurringTransaction[]>(activeWorkspace.recurringTransactions);
+  const [backupSnapshots, setBackupSnapshots] = useState<BackupSnapshot[]>(activeWorkspace.backupSnapshots);
+  const [locked, setLocked] = useState(() => Boolean(activeWorkspace.settings.pinHash));
   const [selectedMonth, setSelectedMonth] = useState(() => getMonthKey());
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -169,6 +197,8 @@ export function useFinanceApp() {
     setMonthlyGoals(nextWorkspace.monthlyGoals);
     setMonthlyClosures(nextWorkspace.monthlyClosures);
     setRecurringTransactions(nextWorkspace.recurringTransactions);
+    setBackupSnapshots(nextWorkspace.backupSnapshots);
+    setLocked(Boolean(nextWorkspace.settings.pinHash));
   }, []);
 
   const pushNotification = useCallback((input: Omit<AppNotification, "id" | "createdAt" | "read">) => {
@@ -216,6 +246,53 @@ export function useFinanceApp() {
   const goToPreviousMonth = useCallback(() => setSelectedMonth(prev => shiftMonth(prev, -1)), []);
   const goToNextMonth = useCallback(() => setSelectedMonth(prev => shiftMonth(prev, 1)), []);
 
+  const buildBackup = useCallback((overrides: Partial<WorkspaceData> = {}, targetUser = user): DenariusBackup | null => {
+    if (!targetUser) return null;
+
+    return {
+      app: "DENARIUS",
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      user: targetUser,
+      transactions: overrides.transactions ?? transactions,
+      categories: overrides.categories ?? categories,
+      settings: overrides.settings ?? settings,
+      monthlyGoals: overrides.monthlyGoals ?? monthlyGoals,
+      monthlyClosures: overrides.monthlyClosures ?? monthlyClosures,
+      recurringTransactions: overrides.recurringTransactions ?? recurringTransactions,
+    };
+  }, [categories, monthlyClosures, monthlyGoals, recurringTransactions, settings, transactions, user]);
+
+  const saveBackupSnapshot = useCallback((reason: BackupSnapshot["reason"], overrides: Partial<WorkspaceData> = {}, targetUser = user) => {
+    const backup = buildBackup(overrides, targetUser);
+    if (!backup || !targetUser) return;
+
+    const snapshot = createBackupSnapshot(backup, reason);
+    setBackupSnapshots(prev => {
+      const nextSnapshots = [snapshot, ...prev].slice(0, 5);
+      writeWorkspace(targetUser, { backupSnapshots: nextSnapshots });
+      return nextSnapshots;
+    });
+  }, [buildBackup, user]);
+
+  useEffect(() => {
+    if (!user || !settings.pinHash || locked) return;
+
+    let timeout = window.setTimeout(() => setLocked(true), Math.max(settings.autoLockMinutes, 1) * 60 * 1000);
+    const reset = () => {
+      window.clearTimeout(timeout);
+      timeout = window.setTimeout(() => setLocked(true), Math.max(settings.autoLockMinutes, 1) * 60 * 1000);
+    };
+
+    window.addEventListener("pointerdown", reset);
+    window.addEventListener("keydown", reset);
+    return () => {
+      window.clearTimeout(timeout);
+      window.removeEventListener("pointerdown", reset);
+      window.removeEventListener("keydown", reset);
+    };
+  }, [locked, settings.autoLockMinutes, settings.pinHash, user]);
+
   const login = useCallback(async (email: string, password: string) => {
     setLoading(true);
     setError(null);
@@ -257,6 +334,7 @@ export function useFinanceApp() {
         monthlyGoals: [],
         monthlyClosures: [],
         recurringTransactions: [],
+        backupSnapshots: [],
       };
 
       localStorage.removeItem(TOKEN_KEY);
@@ -271,6 +349,8 @@ export function useFinanceApp() {
       setMonthlyGoals(nextWorkspace.monthlyGoals);
       setMonthlyClosures(nextWorkspace.monthlyClosures);
       setRecurringTransactions(nextWorkspace.recurringTransactions);
+      setBackupSnapshots(nextWorkspace.backupSnapshots);
+      setLocked(false);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Falha ao criar conta.";
       setError(message);
@@ -282,14 +362,14 @@ export function useFinanceApp() {
 
   const logout = useCallback(() => {
     if (user) {
-      persistWorkspace({ transactions, categories, settings, notifications, monthlyGoals, monthlyClosures, recurringTransactions }, user);
+      persistWorkspace({ transactions, categories, settings, notifications, monthlyGoals, monthlyClosures, recurringTransactions, backupSnapshots }, user);
     }
 
     localStorage.removeItem(TOKEN_KEY);
     writeLocalStorage(MODE_KEY, "local");
     writeActiveLocalUser(null);
     setUser(null);
-  }, [categories, monthlyClosures, monthlyGoals, notifications, persistWorkspace, recurringTransactions, settings, transactions, user]);
+  }, [backupSnapshots, categories, monthlyClosures, monthlyGoals, notifications, persistWorkspace, recurringTransactions, settings, transactions, user]);
 
   const addTransaction = useCallback(async (input: TransactionInput) => {
     const transactionMonth = input.date.slice(0, 7);
@@ -376,6 +456,48 @@ export function useFinanceApp() {
     pushNotification({ title: "Transação removida", message: "O lançamento saiu da sua lista.", kind: "info" });
   }, [categories, persistWorkspace, pushNotification, transactions]);
 
+  const updateTransaction = useCallback(async (id: string, input: TransactionInput) => {
+    const nextTransactions = transactions.map(transaction => transaction.id === id ? { ...transaction, ...input } : transaction);
+    const nextCategories = applyCategorySpent(ensureCategoryList(categories, [input.category]), nextTransactions);
+
+    setTransactions(nextTransactions);
+    setCategories(nextCategories);
+    persistWorkspace({ transactions: nextTransactions, categories: nextCategories });
+    saveBackupSnapshot("auto", { transactions: nextTransactions, categories: nextCategories });
+    pushNotification({ title: "Transação atualizada", message: `${input.description} foi salvo.`, kind: "success" });
+  }, [categories, persistWorkspace, pushNotification, saveBackupSnapshot, transactions]);
+
+  const duplicateTransaction = useCallback(async (id: string) => {
+    const transaction = transactions.find(item => item.id === id);
+    if (!transaction) return;
+
+    const duplicated: Transaction = {
+      ...transaction,
+      id: crypto.randomUUID(),
+      description: `${transaction.description} (cópia)`,
+      recurringId: undefined,
+      recurringMonth: undefined,
+    };
+    const nextTransactions = [duplicated, ...transactions];
+    const nextCategories = applyCategorySpent(categories, nextTransactions);
+
+    setTransactions(nextTransactions);
+    setCategories(nextCategories);
+    persistWorkspace({ transactions: nextTransactions, categories: nextCategories });
+    saveBackupSnapshot("auto", { transactions: nextTransactions, categories: nextCategories });
+    pushNotification({ title: "Transação duplicada", message: `${transaction.description} foi copiada.`, kind: "success" });
+  }, [categories, persistWorkspace, pushNotification, saveBackupSnapshot, transactions]);
+
+  const toggleTransactionStatus = useCallback(async (id: string) => {
+    const nextTransactions = transactions.map(transaction => transaction.id === id
+      ? { ...transaction, status: transaction.status === "completed" ? "pending" as const : "completed" as const }
+      : transaction);
+
+    setTransactions(nextTransactions);
+    persistWorkspace({ transactions: nextTransactions });
+    saveBackupSnapshot("auto", { transactions: nextTransactions });
+  }, [persistWorkspace, saveBackupSnapshot, transactions]);
+
   const clearTransactions = useCallback(async () => {
     const nextCategories = applyCategorySpent(categories, []);
 
@@ -384,6 +506,168 @@ export function useFinanceApp() {
     persistWorkspace({ transactions: [], categories: nextCategories });
     pushNotification({ title: "Dados limpos", message: "Todas as transações foram removidas.", kind: "warning" });
   }, [categories, persistWorkspace, pushNotification]);
+
+  const exportBackup = useCallback(async () => {
+    if (!user) return;
+
+    const exportedAt = new Date().toISOString();
+    const nextSettings = { ...settings, lastBackupAt: exportedAt };
+    const backup = buildBackup({ settings: nextSettings }, user);
+    if (!backup) return;
+
+    setSettings(nextSettings);
+    persistWorkspace({ settings: nextSettings });
+    saveBackupSnapshot("manual", { settings: nextSettings }, user);
+    downloadBackupFile(backup);
+    pushNotification({ title: "Backup exportado", message: "Um arquivo JSON completo foi gerado.", kind: "success" });
+  }, [buildBackup, persistWorkspace, pushNotification, saveBackupSnapshot, settings, user]);
+
+  const importBackup = useCallback(async (file: File) => {
+    if (!user) return;
+
+    const backup = parseBackupFile(await file.text());
+    const importedUser = updateLocalAccountUser({
+      ...user,
+      name: backup.user.name,
+      email: backup.user.email,
+      avatarUrl: backup.user.avatarUrl,
+      title: backup.user.title,
+      phone: backup.user.phone,
+      bio: backup.user.bio,
+      plan: backup.user.plan,
+    });
+    const nextSettings = normalizeSettings({
+      ...backup.settings,
+      lastBackupAt: new Date().toISOString(),
+    });
+    const nextCategories = applyCategorySpent(backup.categories, backup.transactions);
+
+    setUser(importedUser);
+    setTransactions(backup.transactions);
+    setCategories(nextCategories);
+    setSettings(nextSettings);
+    setMonthlyGoals(backup.monthlyGoals);
+    setMonthlyClosures(backup.monthlyClosures);
+    setRecurringTransactions(backup.recurringTransactions);
+    writeWorkspace(importedUser, {
+      transactions: backup.transactions,
+      categories: nextCategories,
+      settings: nextSettings,
+      monthlyGoals: backup.monthlyGoals,
+      monthlyClosures: backup.monthlyClosures,
+      recurringTransactions: backup.recurringTransactions,
+    });
+    saveBackupSnapshot("import", {
+      transactions: backup.transactions,
+      categories: nextCategories,
+      settings: nextSettings,
+      monthlyGoals: backup.monthlyGoals,
+      monthlyClosures: backup.monthlyClosures,
+      recurringTransactions: backup.recurringTransactions,
+    }, importedUser);
+    pushNotification({ title: "Backup restaurado", message: "Seus dados foram restaurados neste perfil.", kind: "success" });
+  }, [pushNotification, saveBackupSnapshot, user]);
+
+  const createManualSnapshot = useCallback(async () => {
+    const lastAutoBackupAt = new Date().toISOString();
+    const nextSettings = { ...settings, lastAutoBackupAt };
+
+    setSettings(nextSettings);
+    persistWorkspace({ settings: nextSettings });
+    saveBackupSnapshot("manual", { settings: nextSettings });
+    pushNotification({ title: "Snapshot criado", message: "Uma cópia local foi salva neste navegador.", kind: "success" });
+  }, [persistWorkspace, pushNotification, saveBackupSnapshot, settings]);
+
+  const restoreSnapshot = useCallback(async (id: string) => {
+    const snapshot = backupSnapshots.find(item => item.id === id);
+    if (!snapshot || !user) return;
+
+    const backup = snapshot.payload;
+    const nextSettings = normalizeSettings({
+      ...backup.settings,
+      lastBackupAt: new Date().toISOString(),
+    });
+    const nextCategories = applyCategorySpent(backup.categories, backup.transactions);
+
+    setTransactions(backup.transactions);
+    setCategories(nextCategories);
+    setSettings(nextSettings);
+    setMonthlyGoals(backup.monthlyGoals);
+    setMonthlyClosures(backup.monthlyClosures);
+    setRecurringTransactions(backup.recurringTransactions);
+    writeWorkspace(user, {
+      transactions: backup.transactions,
+      categories: nextCategories,
+      settings: nextSettings,
+      monthlyGoals: backup.monthlyGoals,
+      monthlyClosures: backup.monthlyClosures,
+      recurringTransactions: backup.recurringTransactions,
+    });
+    pushNotification({ title: "Snapshot restaurado", message: "Os dados locais voltaram para a versão escolhida.", kind: "success" });
+  }, [backupSnapshots, pushNotification, user]);
+
+  const setSecurityPin = useCallback(async (pin: string) => {
+    if (!/^\d{4,8}$/.test(pin)) {
+      throw new Error("O PIN precisa ter entre 4 e 8 números.");
+    }
+
+    const pinSalt = createSalt();
+    const pinHash = await hashSecret(pin, pinSalt);
+    const nextSettings = { ...settings, pinSalt, pinHash };
+
+    setSettings(nextSettings);
+    setLocked(false);
+    persistWorkspace({ settings: nextSettings });
+    pushNotification({ title: "PIN ativado", message: "O bloqueio local já está protegendo sua sessão.", kind: "success" });
+  }, [persistWorkspace, pushNotification, settings]);
+
+  const clearSecurityPin = useCallback(async () => {
+    const nextSettings = { ...settings, pinHash: undefined, pinSalt: undefined };
+
+    setSettings(nextSettings);
+    setLocked(false);
+    persistWorkspace({ settings: nextSettings });
+    pushNotification({ title: "PIN removido", message: "O bloqueio local foi desativado.", kind: "info" });
+  }, [persistWorkspace, pushNotification, settings]);
+
+  const unlockWithPin = useCallback(async (pin: string) => {
+    if (!settings.pinHash || !settings.pinSalt) {
+      setLocked(false);
+      return true;
+    }
+
+    const valid = await verifySecret(pin, settings.pinSalt, settings.pinHash);
+    if (valid) setLocked(false);
+    return valid;
+  }, [settings.pinHash, settings.pinSalt]);
+
+  const lockApp = useCallback(() => {
+    if (settings.pinHash) setLocked(true);
+  }, [settings.pinHash]);
+
+  const completeOnboarding = useCallback(async (input: OnboardingInput) => {
+    const nextSettings = {
+      ...settings,
+      currency: input.currency,
+      onboardingCompleted: true,
+    };
+    const goal: MonthlyGoal = {
+      month: selectedMonth,
+      savingsTarget: Math.max(0, input.savingsTarget),
+      spendingLimit: Math.max(0, input.spendingLimit),
+      notes: input.notes.trim(),
+      updatedAt: new Date().toISOString(),
+    };
+    const nextGoals = monthlyGoals.some(item => item.month === selectedMonth)
+      ? monthlyGoals.map(item => item.month === selectedMonth ? goal : item)
+      : [goal, ...monthlyGoals];
+
+    setSettings(nextSettings);
+    setMonthlyGoals(nextGoals);
+    persistWorkspace({ settings: nextSettings, monthlyGoals: nextGoals });
+    saveBackupSnapshot("auto", { settings: nextSettings, monthlyGoals: nextGoals });
+    pushNotification({ title: "Primeira configuração concluída", message: "Seu DENARIUS já está ajustado para o mês.", kind: "success" });
+  }, [monthlyGoals, persistWorkspace, pushNotification, saveBackupSnapshot, selectedMonth, settings]);
 
   const saveMonthlyGoal = useCallback(async (input: MonthlyGoalInput) => {
     const goal: MonthlyGoal = {
@@ -503,10 +787,13 @@ export function useFinanceApp() {
   }, [categories, persistWorkspace, pushNotification, recurringTransactions, selectedMonth, selectedMonthLabel, transactions]);
 
   const saveSettings = useCallback(async (nextSettings: Settings) => {
-    setSettings(nextSettings);
-    persistWorkspace({ settings: nextSettings });
+    const normalizedSettings = normalizeSettings(nextSettings);
+
+    setSettings(normalizedSettings);
+    persistWorkspace({ settings: normalizedSettings });
+    saveBackupSnapshot("auto", { settings: normalizedSettings });
     pushNotification({ title: "Preferências salvas", message: "Suas configurações foram atualizadas.", kind: "success" });
-  }, [persistWorkspace, pushNotification]);
+  }, [persistWorkspace, pushNotification, saveBackupSnapshot]);
 
   const updateProfile = useCallback(async (profile: ProfileInput) => {
     if (!user) return;
@@ -576,6 +863,7 @@ export function useFinanceApp() {
     monthlyGoals,
     monthlyClosures,
     recurringTransactions,
+    backupSnapshots,
     selectedMonthlyGoal,
     selectedMonthlyClosure,
     stats,
@@ -587,16 +875,29 @@ export function useFinanceApp() {
     goToNextMonth,
     loading,
     error,
+    locked,
     login,
     register,
     logout,
+    lockApp,
+    unlockWithPin,
+    setSecurityPin,
+    clearSecurityPin,
+    completeOnboarding,
     updateProfile,
     markNotificationsRead,
     clearNotifications,
     addTransaction,
     importTransactions,
+    updateTransaction,
+    duplicateTransaction,
+    toggleTransactionStatus,
     deleteTransaction,
     clearTransactions,
+    exportBackup,
+    importBackup,
+    createManualSnapshot,
+    restoreSnapshot,
     saveMonthlyGoal,
     closeSelectedMonth,
     reopenSelectedMonth,

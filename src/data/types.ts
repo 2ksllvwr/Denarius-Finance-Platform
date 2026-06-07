@@ -34,6 +34,12 @@ export interface Settings {
   notifEmail: boolean;
   notifBudget: boolean;
   currency: "BRL" | "USD" | "EUR";
+  onboardingCompleted: boolean;
+  pinHash?: string;
+  pinSalt?: string;
+  autoLockMinutes: number;
+  lastBackupAt?: string;
+  lastAutoBackupAt?: string;
 }
 
 export interface ProfileInput {
@@ -83,6 +89,30 @@ export interface RecurringTransaction {
   status: "completed" | "pending";
   active: boolean;
   lastGeneratedMonth?: string;
+}
+
+export interface BackupSnapshot {
+  id: string;
+  createdAt: string;
+  reason: "auto" | "manual" | "import";
+  transactionCount: number;
+  categoryCount: number;
+  monthlyGoalCount: number;
+  recurringCount: number;
+  payload: DenariusBackup;
+}
+
+export interface DenariusBackup {
+  app: "DENARIUS";
+  version: 1;
+  exportedAt: string;
+  user: User;
+  transactions: Transaction[];
+  categories: Category[];
+  settings: Settings;
+  monthlyGoals: MonthlyGoal[];
+  monthlyClosures: MonthlyClosure[];
+  recurringTransactions: RecurringTransaction[];
 }
 
 export interface Stats {
@@ -144,4 +174,6 @@ export const DEFAULT_SETTINGS: Settings = {
   notifEmail: true,
   notifBudget: true,
   currency: "BRL",
+  onboardingCompleted: false,
+  autoLockMinutes: 5,
 };

@@ -10,6 +10,18 @@ import {
   IconTrendUp,
   IconWallet,
 } from "@/components/Icons";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 
 interface DashboardPageProps {
   stats: Stats;
@@ -22,7 +34,11 @@ interface DashboardPageProps {
 }
 
 export function DashboardPage({ stats, transactions, categories, monthly, currency, selectedMonthLabel, onViewTransactions }: DashboardPageProps) {
-  const maxVal = Math.max(1, ...monthly.map(item => Math.max(item.income, item.expense)));
+  const categoryChart = categories
+    .filter(category => category.spent > 0)
+    .sort((a, b) => b.spent - a.spent)
+    .slice(0, 5);
+  const formatTooltipCurrency = (value: unknown) => formatCurrency(Number(value ?? 0), currency);
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-[1200px] mx-auto space-y-5 sm:space-y-6 animate-fade-in">
@@ -39,7 +55,14 @@ export function DashboardPage({ stats, transactions, categories, monthly, curren
               <div className={cn("w-8 h-8 rounded-xl flex items-center justify-center transition-colors", card.bg)}><card.icon size={15} className={card.color} /></div>
             </div>
             <p className={cn("text-xl sm:text-2xl font-bold tabular-nums tracking-tight", card.color)}>{formatCurrency(card.value, currency)}</p>
-            {index === 0 && <div className="mt-3 pt-3 border-t border-border hidden sm:block"><div className="flex items-center gap-1.5 text-[11px] text-gray-400"><IconTrendUp size={13} className="text-success-500" /><span className="text-success-600 font-medium capitalize">{selectedMonthLabel}</span></div></div>}
+            {index === 0 && (
+              <div className="mt-3 pt-3 border-t border-border hidden sm:block">
+                <div className="flex items-center gap-1.5 text-[11px] text-gray-400">
+                  <IconTrendUp size={13} className="text-success-500" />
+                  <span className="text-success-600 font-medium capitalize">{selectedMonthLabel}</span>
+                </div>
+              </div>
+            )}
           </div>
         ))}
       </div>
@@ -56,7 +79,9 @@ export function DashboardPage({ stats, transactions, categories, monthly, curren
           <div className="divide-y divide-border">
             {transactions.slice(0, 8).map(tx => (
               <div key={tx.id} className="flex items-center gap-3 px-5 py-3 hover:bg-gray-50/50 transition-colors">
-                <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0", tx.type === "income" ? "bg-success-50" : "bg-danger-50")}>{tx.type === "income" ? <IconArrowUp size={15} className="text-success-600" /> : <IconArrowDown size={15} className="text-danger-500" />}</div>
+                <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0", tx.type === "income" ? "bg-success-50" : "bg-danger-50")}>
+                  {tx.type === "income" ? <IconArrowUp size={15} className="text-success-600" /> : <IconArrowDown size={15} className="text-danger-500" />}
+                </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-[13px] font-medium text-gray-800 truncate">{tx.description}</p>
                   <div className="flex items-center gap-2 mt-0.5">
@@ -66,7 +91,7 @@ export function DashboardPage({ stats, transactions, categories, monthly, curren
                     {tx.status === "pending" && <><span className="w-0.5 h-0.5 rounded-full bg-gray-300" /><span className="text-[10px] font-medium text-warning-500 bg-warning-50 px-1.5 py-0.5 rounded">Pendente</span></>}
                   </div>
                 </div>
-                <span className={cn("text-[13px] font-semibold tabular-nums flex-shrink-0", tx.type === "income" ? "text-success-600" : "text-gray-700")}>{tx.type === "income" ? "+" : "−"} {formatCurrency(tx.amount, currency)}</span>
+                <span className={cn("text-[13px] font-semibold tabular-nums flex-shrink-0", tx.type === "income" ? "text-success-600" : "text-gray-700")}>{tx.type === "income" ? "+" : "-"} {formatCurrency(tx.amount, currency)}</span>
               </div>
             ))}
             {transactions.length === 0 && <p className="p-8 text-center text-sm text-gray-400">Nenhuma transação registrada.</p>}
@@ -96,27 +121,63 @@ export function DashboardPage({ stats, transactions, categories, monthly, curren
         </div>
       </div>
 
-      <div className="bg-card border border-border rounded-2xl p-5 sm:p-6">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h2 className="text-sm font-semibold text-gray-900">Visão mensal</h2>
-            <p className="text-[11px] text-gray-400 mt-0.5">Comparativo receitas vs despesas</p>
+      <div className="grid grid-cols-1 lg:grid-cols-[1.45fr_0.85fr] gap-4 sm:gap-5">
+        <div className="bg-card border border-border rounded-2xl p-5 sm:p-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
+            <div>
+              <h2 className="text-sm font-semibold text-gray-900">Visão mensal</h2>
+              <p className="text-[11px] text-gray-400 mt-0.5">Comparativo receitas vs despesas</p>
+            </div>
+            <div className="flex items-center gap-5">
+              <div className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-sm bg-brand-500" /><span className="text-[11px] text-gray-500">Receitas</span></div>
+              <div className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-sm bg-danger-500" /><span className="text-[11px] text-gray-500">Despesas</span></div>
+            </div>
           </div>
-          <div className="flex items-center gap-5"><div className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-sm bg-brand-500" /><span className="text-[11px] text-gray-500">Receitas</span></div><div className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-sm bg-gray-200" /><span className="text-[11px] text-gray-500">Despesas</span></div></div>
+          <div className="h-[260px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={monthly} margin={{ top: 8, right: 8, left: -18, bottom: 0 }}>
+                <CartesianGrid stroke="#f0f0f0" vertical={false} />
+                <XAxis dataKey="label" tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: "#9ca3af" }} />
+                <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: "#9ca3af" }} />
+                <Tooltip
+                  cursor={{ fill: "#f8fafc" }}
+                  formatter={formatTooltipCurrency}
+                  contentStyle={{ borderRadius: 12, border: "1px solid #f0f0f0", boxShadow: "0 12px 30px rgba(15,23,42,0.08)" }}
+                />
+                <Bar dataKey="income" name="Receitas" fill="#3b6cf5" radius={[6, 6, 0, 0]} />
+                <Bar dataKey="expense" name="Despesas" fill="#ef4444" radius={[6, 6, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
         </div>
-        <div className="flex items-end gap-2 sm:gap-3">
-          {monthly.map((item, index) => {
-            const isLast = index === monthly.length - 1;
-            return (
-              <div key={`${item.label}-${index}`} className="flex-1 text-center group">
-                <div className="flex items-end justify-center gap-[3px] sm:gap-1 h-28 sm:h-36 mb-2">
-                  <div className={cn("flex-1 max-w-3 sm:max-w-4 rounded-t-md transition-all duration-300 group-hover:opacity-80", isLast ? "bg-brand-500" : "bg-brand-500/70")} style={{ height: `${(item.income / maxVal) * 100}%` }} />
-                  <div className="flex-1 max-w-3 sm:max-w-4 bg-gray-200/80 rounded-t-md transition-all duration-300 group-hover:bg-gray-300" style={{ height: `${(item.expense / maxVal) * 100}%` }} />
-                </div>
-                <p className={cn("text-[10px] sm:text-[11px] font-medium", isLast ? "text-brand-600" : "text-gray-400")}>{item.label}</p>
+
+        <div className="bg-card border border-border rounded-2xl p-5 sm:p-6">
+          <div>
+            <h2 className="text-sm font-semibold text-gray-900">Categorias do mês</h2>
+            <p className="text-[11px] text-gray-400 mt-0.5">Distribuição das despesas</p>
+          </div>
+          <div className="h-[220px] mt-4">
+            {categoryChart.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie data={categoryChart} dataKey="spent" nameKey="name" innerRadius={54} outerRadius={82} paddingAngle={3}>
+                    {categoryChart.map(category => <Cell key={category.id} fill={category.color} />)}
+                  </Pie>
+                  <Tooltip formatter={formatTooltipCurrency} />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-full flex items-center justify-center text-sm text-gray-400">Sem despesas no mês.</div>
+            )}
+          </div>
+          <div className="space-y-2">
+            {categoryChart.map(category => (
+              <div key={category.id} className="flex items-center justify-between gap-3 text-[12px]">
+                <span className="flex items-center gap-2 text-gray-500 truncate"><span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: category.color }} />{category.name}</span>
+                <strong className="text-gray-800 tabular-nums">{formatCurrency(category.spent, currency)}</strong>
               </div>
-            );
-          })}
+            ))}
+          </div>
         </div>
       </div>
     </div>

@@ -1,17 +1,25 @@
 import { useEffect, useId, useState } from "react";
 import { ProfileAvatar } from "@/components/ProfileAvatar";
-import { IconCheck, IconDownload, IconTrash, IconUser } from "@/components/Icons";
-import type { ProfileInput, Settings, User } from "@/data/types";
+import { IconCheck, IconDownload, IconShield, IconTrash, IconUser } from "@/components/Icons";
+import type { BackupSnapshot, ProfileInput, Settings, User } from "@/data/types";
 import { cn } from "@/utils/cn";
 
 interface SettingsPageProps {
   user: User;
   settings: Settings;
+  backupSnapshots: BackupSnapshot[];
   onSave: (settings: Settings) => Promise<void>;
   onUpdateProfile: (profile: ProfileInput) => Promise<void>;
   onClear: () => Promise<void>;
   onExportCsv: () => void;
   onExportPdf: () => void;
+  onExportBackup: () => Promise<void>;
+  onImportBackup: (file: File) => Promise<void>;
+  onCreateSnapshot: () => Promise<void>;
+  onRestoreSnapshot: (id: string) => Promise<void>;
+  onSetPin: (pin: string) => Promise<void>;
+  onClearPin: () => Promise<void>;
+  onLock: () => void;
 }
 
 const profileFromUser = (user: User): ProfileInput => ({
@@ -23,12 +31,31 @@ const profileFromUser = (user: User): ProfileInput => ({
   bio: user.bio ?? "",
 });
 
-export function SettingsPage({ user, settings, onSave, onUpdateProfile, onClear, onExportCsv, onExportPdf }: SettingsPageProps) {
+export function SettingsPage({
+  user,
+  settings,
+  backupSnapshots,
+  onSave,
+  onUpdateProfile,
+  onClear,
+  onExportCsv,
+  onExportPdf,
+  onExportBackup,
+  onImportBackup,
+  onCreateSnapshot,
+  onRestoreSnapshot,
+  onSetPin,
+  onClearPin,
+  onLock,
+}: SettingsPageProps) {
   const fileInputId = useId();
+  const backupInputId = useId();
   const [draftSettings, setDraftSettings] = useState(settings);
   const [draftProfile, setDraftProfile] = useState<ProfileInput>(() => profileFromUser(user));
   const [saved, setSaved] = useState(false);
   const [profileError, setProfileError] = useState<string | null>(null);
+  const [pin, setPin] = useState("");
+  const [securityMessage, setSecurityMessage] = useState("");
 
   useEffect(() => setDraftSettings(settings), [settings]);
   useEffect(() => setDraftProfile(profileFromUser(user)), [user]);
@@ -66,6 +93,30 @@ export function SettingsPage({ user, settings, onSave, onUpdateProfile, onClear,
       }
     };
     reader.readAsDataURL(file);
+  };
+
+  const importBackup = async (file: File | undefined) => {
+    if (!file) return;
+
+    setProfileError(null);
+    try {
+      await onImportBackup(file);
+      setSaved(true);
+      window.setTimeout(() => setSaved(false), 2200);
+    } catch (err) {
+      setProfileError(err instanceof Error ? err.message : "Não foi possível restaurar o backup.");
+    }
+  };
+
+  const activatePin = async () => {
+    setSecurityMessage("");
+    try {
+      await onSetPin(pin);
+      setPin("");
+      setSecurityMessage("PIN ativado.");
+    } catch (err) {
+      setSecurityMessage(err instanceof Error ? err.message : "Não foi possível ativar o PIN.");
+    }
   };
 
   return (
@@ -159,13 +210,76 @@ export function SettingsPage({ user, settings, onSave, onUpdateProfile, onClear,
 
       <div className="bg-card border border-border rounded-2xl overflow-hidden">
         <div className="px-5 py-4 border-b border-border">
-          <h3 className="text-sm font-semibold text-gray-900">Dados</h3>
-          <p className="text-[11px] text-gray-400 mt-0.5">Exporte ou gerencie seus dados</p>
+          <h3 className="text-sm font-semibold text-gray-900">Segurança local</h3>
+          <p className="text-[11px] text-gray-400 mt-0.5">Proteja a sessão offline com PIN e bloqueio automático</p>
         </div>
-        <div className="p-5 flex flex-wrap gap-2.5">
-          <button onClick={onExportCsv} className="flex items-center gap-2 border border-border px-4 py-2.5 rounded-xl text-[13px] font-medium text-gray-600 hover:bg-gray-50 hover:border-border-hover transition-all"><IconDownload size={15} /> Exportar CSV</button>
-          <button onClick={onExportPdf} className="flex items-center gap-2 border border-border px-4 py-2.5 rounded-xl text-[13px] font-medium text-gray-600 hover:bg-gray-50 hover:border-border-hover transition-all"><IconDownload size={15} /> Exportar PDF</button>
-          <button onClick={() => void onClear()} className="flex items-center gap-2 border border-danger-100 text-danger-500 px-4 py-2.5 rounded-xl text-[13px] font-medium hover:bg-danger-50 transition-all"><IconTrash size={15} /> Limpar dados</button>
+        <div className="p-5 space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-[1fr_160px] gap-3">
+            <label className="block">
+              <span className="text-[11px] font-medium text-gray-400 block mb-1.5">PIN local</span>
+              <input value={pin} onChange={event => setPin(event.target.value.replace(/\D/g, "").slice(0, 8))} inputMode="numeric" type="password" placeholder={settings.pinHash ? "Novo PIN" : "4 a 8 números"} className="w-full bg-surface border border-border rounded-xl px-3.5 py-2.5 text-[13px] outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500" />
+            </label>
+            <label className="block">
+              <span className="text-[11px] font-medium text-gray-400 block mb-1.5">Bloqueio automático</span>
+              <select value={draftSettings.autoLockMinutes} onChange={event => setDraftSettings(prev => ({ ...prev, autoLockMinutes: Number(event.target.value) }))} className="w-full bg-surface border border-border rounded-xl px-3.5 py-2.5 text-[13px] text-gray-600">
+                <option value={1}>1 minuto</option>
+                <option value={5}>5 minutos</option>
+                <option value={15}>15 minutos</option>
+                <option value={30}>30 minutos</option>
+              </select>
+            </label>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button onClick={() => void activatePin()} disabled={pin.length < 4} className="flex items-center gap-2 bg-gray-900 text-white px-4 py-2.5 rounded-xl text-[13px] font-semibold hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed transition-all">
+              <IconShield size={15} /> {settings.pinHash ? "Atualizar PIN" : "Ativar PIN"}
+            </button>
+            <button onClick={() => void onClearPin()} disabled={!settings.pinHash} className="border border-border px-4 py-2.5 rounded-xl text-[13px] font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all">Remover PIN</button>
+            <button onClick={onLock} disabled={!settings.pinHash} className="border border-border px-4 py-2.5 rounded-xl text-[13px] font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all">Bloquear agora</button>
+            {securityMessage && <span className="self-center text-[12px] text-gray-400">{securityMessage}</span>}
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-card border border-border rounded-2xl overflow-hidden">
+        <div className="px-5 py-4 border-b border-border">
+          <h3 className="text-sm font-semibold text-gray-900">Dados</h3>
+          <p className="text-[11px] text-gray-400 mt-0.5">Exporte, restaure e proteja seus dados offline</p>
+        </div>
+        <div className="p-5 space-y-4">
+          <div className="flex flex-wrap gap-2.5">
+            <button onClick={onExportCsv} className="flex items-center gap-2 border border-border px-4 py-2.5 rounded-xl text-[13px] font-medium text-gray-600 hover:bg-gray-50 hover:border-border-hover transition-all"><IconDownload size={15} /> Exportar CSV</button>
+            <button onClick={onExportPdf} className="flex items-center gap-2 border border-border px-4 py-2.5 rounded-xl text-[13px] font-medium text-gray-600 hover:bg-gray-50 hover:border-border-hover transition-all"><IconDownload size={15} /> Exportar PDF</button>
+            <button onClick={() => void onExportBackup()} className="flex items-center gap-2 bg-gray-900 text-white px-4 py-2.5 rounded-xl text-[13px] font-semibold hover:bg-gray-800 transition-all"><IconDownload size={15} /> Backup JSON</button>
+            <label htmlFor={backupInputId} className="cursor-pointer flex items-center gap-2 border border-border px-4 py-2.5 rounded-xl text-[13px] font-medium text-gray-600 hover:bg-gray-50 hover:border-border-hover transition-all">
+              <IconDownload size={15} /> Restaurar JSON
+            </label>
+            <input id={backupInputId} type="file" accept="application/json,.json" className="hidden" onChange={event => void importBackup(event.target.files?.[0])} />
+            <button onClick={() => void onCreateSnapshot()} className="border border-border px-4 py-2.5 rounded-xl text-[13px] font-medium text-gray-600 hover:bg-gray-50 transition-all">Criar snapshot</button>
+            <button onClick={() => void onClear()} className="flex items-center gap-2 border border-danger-100 text-danger-500 px-4 py-2.5 rounded-xl text-[13px] font-medium hover:bg-danger-50 transition-all"><IconTrash size={15} /> Limpar dados</button>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="rounded-2xl bg-surface border border-border p-4">
+              <p className="text-[11px] font-medium text-gray-400 uppercase">Último backup</p>
+              <p className="text-[13px] font-semibold text-gray-800 mt-2">{settings.lastBackupAt ? new Date(settings.lastBackupAt).toLocaleString("pt-BR") : "Nenhum backup exportado"}</p>
+            </div>
+            <div className="rounded-2xl bg-surface border border-border p-4">
+              <p className="text-[11px] font-medium text-gray-400 uppercase">Snapshots locais</p>
+              <p className="text-[13px] font-semibold text-gray-800 mt-2">{backupSnapshots.length} cópias recentes</p>
+            </div>
+          </div>
+          {backupSnapshots.length > 0 && (
+            <div className="divide-y divide-border rounded-2xl border border-border overflow-hidden">
+              {backupSnapshots.slice(0, 3).map(snapshot => (
+                <div key={snapshot.id} className="flex items-center justify-between gap-3 px-4 py-3 bg-white">
+                  <div className="min-w-0">
+                    <p className="text-[13px] font-semibold text-gray-800">{new Date(snapshot.createdAt).toLocaleString("pt-BR")}</p>
+                    <p className="text-[11px] text-gray-400">{snapshot.transactionCount} transações · {snapshot.recurringCount} recorrências · {snapshot.reason}</p>
+                  </div>
+                  <button onClick={() => void onRestoreSnapshot(snapshot.id)} className="flex-shrink-0 border border-border px-3 py-2 rounded-xl text-[12px] font-semibold text-gray-600 hover:bg-gray-50">Restaurar</button>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
