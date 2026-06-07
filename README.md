@@ -1,21 +1,27 @@
 # DENARIUS
 
-DENARIUS é um aplicativo financeiro pessoal com experiência de SaaS: login próprio, uso offline, organização mensal, metas, recorrências, categorias com orçamento, notificações internas e exportação de dados.
+DENARIUS Finance Platform é uma aplicação financeira offline-first com experiência de SaaS: login próprio, dashboard financeiro, organização mensal, metas, recorrências, backup local, PIN de segurança, PWA instalável e API Express/MongoDB preparada para produção.
 
-O projeto combina um front-end React/Vite pronto para uso offline com um backend Express/MongoDB preparado para produção. Hoje, o fluxo principal funciona localmente pelo navegador; a integração com banco real está documentada em [docs/IMPLEMENTACAO-EXTERNA.md](docs/IMPLEMENTACAO-EXTERNA.md).
+![Dashboard do DENARIUS](docs/screenshots/dashboard.svg)
+
+![Organização mensal do DENARIUS](docs/screenshots/monthly.svg)
 
 ## Destaques
 
 - Autenticação local com cadastro, login, hash de senha e isolamento por usuário.
-- Dashboard financeiro com saldo, receitas, despesas, pendências e histórico mensal.
+- Onboarding pós-cadastro para moeda, meta de saldo, limite de gastos e prioridade mensal.
+- Dashboard com gráficos Recharts para receitas, despesas e distribuição por categoria.
 - Seção mensal para metas, limite de gastos, fechamento/reabertura do mês e recorrências.
-- Transações com filtros por tipo, status, categoria, busca e faixa de valor.
-- Importação CSV, exportação CSV e relatório PDF via impressão do navegador.
-- Categorias com orçamento mensal e cálculo automático de gasto.
+- Transações com criação, edição, duplicação, remoção, alternância de status e filtros avançados.
+- Importação CSV, exportação CSV, relatório PDF e backup/restauração JSON completo.
+- Snapshots locais recentes para restaurar estados anteriores.
+- PIN local, bloqueio manual e bloqueio automático por inatividade.
 - Perfil com foto, cargo, telefone, bio e preferências.
 - Notificações internas em tempo real, com suporte a alertas do navegador.
 - Sidebar responsiva com menu hamburger, animação suave e recolhimento ao clicar fora.
-- Backend Express com rotas protegidas e models Mongoose para evolução com MongoDB.
+- PWA básico com manifest, service worker e shell offline.
+- Backend Express com rotas protegidas, models Mongoose e endpoints para mensal/recorrências.
+- Testes unitários para cálculos, CSV e backup.
 
 ## Stack
 
@@ -23,6 +29,8 @@ O projeto combina um front-end React/Vite pronto para uso offline com um backend
 - Vite 7
 - TypeScript
 - Tailwind CSS 4
+- Recharts
+- Vitest
 - Express 5
 - MongoDB/Mongoose
 - Zod
@@ -83,6 +91,7 @@ npm run dev          # front-end Vite
 npm run dev:server   # API Express em modo watch
 npm run dev:full     # front-end + API
 npm run typecheck    # checagem TypeScript
+npm run test         # testes unitários
 npm run build        # build de produção
 npm run preview      # preview do build
 npm run audit        # auditoria de dependências
@@ -92,11 +101,11 @@ npm run audit        # auditoria de dependências
 
 ```text
 src/
-  components/        componentes reutilizáveis, layout, marca e modal
+  components/        componentes reutilizáveis, layout, marca, bloqueio e modal
   data/              tipos, dados iniciais e formatadores
   hooks/             estado principal do app financeiro
-  pages/             dashboard, mensal, transações, categorias, planos e ajustes
-  utils/             autenticação local, storage e cálculos financeiros
+  pages/             dashboard, onboarding, mensal, transações, categorias, planos e ajustes
+  utils/             autenticação local, backup, CSV, storage, segurança e cálculos
 server/
   config/            ambiente e conexão MongoDB
   middleware/        autenticação JWT
@@ -104,6 +113,7 @@ server/
   routes/            rotas REST
   utils/             defaults e serializers
 docs/
+  screenshots/       imagens SVG para README/portfólio
   IMPLEMENTACAO-EXTERNA.md
 ```
 
@@ -122,6 +132,20 @@ docs/
 - `DELETE /api/transactions/:id`
 - `DELETE /api/transactions`
 
+### Mensal
+
+- `GET /api/monthly`
+- `PUT /api/monthly/goals/:month`
+- `PUT /api/monthly/closures/:month`
+- `DELETE /api/monthly/closures/:month`
+
+### Recorrências
+
+- `GET /api/recurring`
+- `POST /api/recurring`
+- `PATCH /api/recurring/:id`
+- `DELETE /api/recurring/:id`
+
 ### Categorias
 
 - `GET /api/categories`
@@ -134,16 +158,10 @@ docs/
 - `GET /api/settings`
 - `PATCH /api/settings`
 
-### Resumo
+### Resumo, exportação e planos
 
 - `GET /api/summary`
-
-### Exportação
-
 - `GET /api/export/csv`
-
-### Planos
-
 - `GET /api/billing/plans`
 - `PATCH /api/billing/plan`
 - `POST /api/billing/checkout`
@@ -162,22 +180,28 @@ data;descricao;tipo;categoria;status;valor
 
 Também são aceitos termos em inglês como `income`, `expense`, `completed` e `pending`.
 
+## Backup e segurança
+
+- Use **Backup JSON** em Ajustes para exportar conta, perfil, transações, categorias, metas, fechamentos e recorrências.
+- Use **Restaurar JSON** para recuperar um backup no perfil atual.
+- Use **Criar snapshot** para salvar cópias locais rápidas no navegador.
+- Ative **PIN local** para bloquear a sessão por inatividade ou manualmente.
+
 ## Observações importantes
 
-- O app offline depende do `localStorage`; limpar dados do navegador apaga contas e lançamentos locais.
+- O app offline depende do `localStorage`; limpar dados do navegador apaga contas e lançamentos locais sem backup.
 - O `.env` não deve ser versionado.
 - A API precisa de `MONGODB_URI` e `JWT_SECRET` para iniciar.
 - A geração de PDF usa a janela de impressão do navegador.
-- Checkout, push externo e sincronização completa estão preparados como próximos passos, mas não conectados.
+- O checkout de assinatura ainda é placeholder para integração futura.
 
 ## Próximos passos recomendados
 
-- Migrar dados offline para IndexedDB com backup JSON.
-- Implementar rotas de metas mensais, fechamentos e recorrências no backend.
-- Adicionar sincronização offline-first com resolução de conflitos.
-- Criar instalador com Electron ou Tauri.
+- Migrar dados offline para IndexedDB para armazenar bases maiores.
+- Criar sincronização offline-first entre localStorage/IndexedDB e MongoDB.
+- Adicionar testes de componentes e fluxos com Playwright.
+- Criar instalador desktop com Electron ou Tauri.
 - Conectar gateway de pagamento para planos.
-- Adicionar testes automatizados para autenticação, importação CSV e fechamento mensal.
 
 ## Licença
 

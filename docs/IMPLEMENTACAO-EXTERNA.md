@@ -23,25 +23,25 @@ VITE_API_URL=http://localhost:3333/api
 
 Sugestão de migração: manter o modo offline como fallback e criar um botão "Sincronizar" que envie `transactions`, `categories`, `settings`, `monthlyGoals`, `monthlyClosures` e `recurringTransactions` para rotas novas no backend.
 
-## 2. Criar models e rotas que ainda faltam
+## 2. Evoluir models e rotas de mensal/recorrências
 
-Hoje o backend já tem usuário, transações, categorias e configurações. Para refletir as novas melhorias no banco, crie:
+O backend já tem usuário, transações, categorias, configurações, metas mensais, fechamentos e recorrências. Para levar isso a produção, evolua:
 
-- `server/models/MonthlyGoal.ts`
-- `server/models/MonthlyClosure.ts`
-- `server/models/RecurringTransaction.ts`
-- `server/routes/monthly.ts`
-- `server/routes/recurring.ts`
+- sincronização bidirecional entre dados offline e API;
+- endpoints de geração automática de recorrências no servidor;
+- histórico/auditoria de alterações em fechamentos mensais;
+- validações de conflito quando o mesmo mês for editado offline e online.
 
-Campos mínimos:
+Rotas já disponíveis:
 
-```ts
-userId, month, savingsTarget, spendingLimit, notes, updatedAt
-userId, month, closedAt, income, expense, balance, pending, transactionCount, notes
-userId, description, amount, type, category, dayOfMonth, status, active, lastGeneratedMonth
-```
-
-Depois registre as rotas em `server/index.ts` usando o middleware de autenticação.
+- `GET /api/monthly`
+- `PUT /api/monthly/goals/:month`
+- `PUT /api/monthly/closures/:month`
+- `DELETE /api/monthly/closures/:month`
+- `GET /api/recurring`
+- `POST /api/recurring`
+- `PATCH /api/recurring/:id`
+- `DELETE /api/recurring/:id`
 
 ## 3. Gerar executável
 
@@ -107,7 +107,7 @@ Antes de produção:
 ## Checklist de produção
 
 - Banco configurado e testado.
-- Rotas novas de mensal e recorrências implementadas.
+- Rotas de mensal e recorrências conectadas à sincronização frontend.
 - Frontend alternando entre offline e API.
 - Build web rodando com `npm run build`.
 - Instalador gerado com Electron/Tauri.
