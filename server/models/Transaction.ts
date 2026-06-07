@@ -9,6 +9,8 @@ const transactionSchema = new Schema(
     category: { type: String, required: true, trim: true, maxlength: 60 },
     date: { type: Date, required: true, index: true },
     status: { type: String, enum: ["completed", "pending"], default: "completed" },
+    recurringId: { type: String },
+    recurringMonth: { type: String },
   },
   { timestamps: true },
 );

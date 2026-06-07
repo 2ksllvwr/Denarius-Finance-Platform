@@ -16,6 +16,8 @@ const transactionSchema = z.object({
   category: z.string().trim().min(2).max(60),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   status: z.enum(["completed", "pending"]).default("completed"),
+  recurringId: z.string().optional(),
+  recurringMonth: z.string().regex(/^\d{4}-\d{2}$/).optional(),
 });
 
 router.get("/", async (req: AuthRequest, res, next) => {

@@ -7,6 +7,8 @@ import authRoutes from "./routes/auth";
 import billingRoutes from "./routes/billing";
 import categoriesRoutes from "./routes/categories";
 import exportRoutes from "./routes/export";
+import monthlyRoutes from "./routes/monthly";
+import recurringRoutes from "./routes/recurring";
 import settingsRoutes from "./routes/settings";
 import summaryRoutes from "./routes/summary";
 import transactionsRoutes from "./routes/transactions";
@@ -25,6 +27,8 @@ app.use("/api/transactions", transactionsRoutes);
 app.use("/api/categories", categoriesRoutes);
 app.use("/api/settings", settingsRoutes);
 app.use("/api/summary", summaryRoutes);
+app.use("/api/monthly", monthlyRoutes);
+app.use("/api/recurring", recurringRoutes);
 app.use("/api/export", exportRoutes);
 app.use("/api/billing", billingRoutes);
 

@@ -6,6 +6,12 @@ const settingsSchema = new Schema(
     notifEmail: { type: Boolean, default: true },
     notifBudget: { type: Boolean, default: true },
     currency: { type: String, default: "BRL" },
+    onboardingCompleted: { type: Boolean, default: false },
+    pinHash: { type: String },
+    pinSalt: { type: String },
+    autoLockMinutes: { type: Number, default: 5, min: 1, max: 60 },
+    lastBackupAt: { type: Date },
+    lastAutoBackupAt: { type: Date },
   },
   { timestamps: true },
 );

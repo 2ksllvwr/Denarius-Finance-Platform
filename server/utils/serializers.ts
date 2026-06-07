@@ -21,6 +21,8 @@ export function serializeTransaction(transaction: TransactionDocument) {
     category: transaction.category,
     date: transaction.date.toISOString().slice(0, 10),
     status: transaction.status,
+    recurringId: transaction.recurringId,
+    recurringMonth: transaction.recurringMonth,
   };
 }
 
@@ -40,5 +42,11 @@ export function serializeSettings(settings: SettingsDocument) {
     notifEmail: settings.notifEmail,
     notifBudget: settings.notifBudget,
     currency: settings.currency,
+    onboardingCompleted: settings.onboardingCompleted,
+    pinHash: settings.pinHash,
+    pinSalt: settings.pinSalt,
+    autoLockMinutes: settings.autoLockMinutes,
+    lastBackupAt: settings.lastBackupAt?.toISOString(),
+    lastAutoBackupAt: settings.lastAutoBackupAt?.toISOString(),
   };
 }

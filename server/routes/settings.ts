@@ -11,12 +11,18 @@ const settingsSchema = z.object({
   notifEmail: z.boolean().optional(),
   notifBudget: z.boolean().optional(),
   currency: z.enum(["BRL", "USD", "EUR"]).optional(),
+  onboardingCompleted: z.boolean().optional(),
+  pinHash: z.string().optional(),
+  pinSalt: z.string().optional(),
+  autoLockMinutes: z.coerce.number().int().min(1).max(60).optional(),
+  lastBackupAt: z.string().datetime().optional(),
+  lastAutoBackupAt: z.string().datetime().optional(),
 });
 
 async function findOrCreateSettings(userId: string) {
   return SettingsModel.findOneAndUpdate(
     { userId },
-    { $setOnInsert: { userId, notifEmail: true, notifBudget: true, currency: "BRL" } },
+    { $setOnInsert: { userId, notifEmail: true, notifBudget: true, currency: "BRL", onboardingCompleted: false, autoLockMinutes: 5 } },
     { upsert: true, new: true },
   );
 }
@@ -33,9 +39,14 @@ router.get("/", async (req: AuthRequest, res, next) => {
 router.patch("/", async (req: AuthRequest, res, next) => {
   try {
     const input = settingsSchema.parse(req.body);
+    const update = {
+      ...input,
+      lastBackupAt: input.lastBackupAt ? new Date(input.lastBackupAt) : undefined,
+      lastAutoBackupAt: input.lastAutoBackupAt ? new Date(input.lastAutoBackupAt) : undefined,
+    };
     const settings = await SettingsModel.findOneAndUpdate(
       { userId: req.userId },
-      { $set: input },
+      { $set: update },
       { new: true, upsert: true },
     );
     res.json({ settings: serializeSettings(settings) });

@@ -1,4 +1,4 @@
-import type { Category, MonthlyPoint, Settings, Stats, Transaction, User } from "@/data/types";
+import type { Category, MonthlyClosure, MonthlyGoal, MonthlyPoint, RecurringTransaction, Settings, Stats, Transaction, User } from "@/data/types";
 
 const API_URL = import.meta.env.VITE_API_URL ?? "/api";
 
@@ -27,7 +27,7 @@ async function request<T>(path: string, options: RequestInit = {}, token?: strin
       const data = (await response.json()) as { message?: string };
       message = data.message ?? message;
     } catch {
-      // mantém mensagem padrão
+      // Keep the default message when the API does not return JSON.
     }
     throw new ApiError(message, response.status);
   }
@@ -89,6 +89,42 @@ export const api = {
       method: "PATCH",
       body: JSON.stringify(settings),
     }, token),
+
+  getMonthly: (token: string, month?: string) =>
+    request<{ goals: MonthlyGoal[]; closures: MonthlyClosure[] }>(`/monthly${month ? `?month=${month}` : ""}`, {}, token),
+
+  saveMonthlyGoal: (token: string, month: string, goal: Omit<MonthlyGoal, "month" | "updatedAt">) =>
+    request<{ goal: MonthlyGoal }>(`/monthly/goals/${month}`, {
+      method: "PUT",
+      body: JSON.stringify(goal),
+    }, token),
+
+  saveMonthlyClosure: (token: string, month: string, closure: Omit<MonthlyClosure, "month">) =>
+    request<{ closure: MonthlyClosure }>(`/monthly/closures/${month}`, {
+      method: "PUT",
+      body: JSON.stringify(closure),
+    }, token),
+
+  deleteMonthlyClosure: (token: string, month: string) =>
+    request<void>(`/monthly/closures/${month}`, { method: "DELETE" }, token),
+
+  getRecurringTransactions: (token: string) =>
+    request<{ recurringTransactions: RecurringTransaction[] }>("/recurring", {}, token),
+
+  createRecurringTransaction: (token: string, recurringTransaction: Omit<RecurringTransaction, "id">) =>
+    request<{ recurringTransaction: RecurringTransaction }>("/recurring", {
+      method: "POST",
+      body: JSON.stringify(recurringTransaction),
+    }, token),
+
+  updateRecurringTransaction: (token: string, id: string, recurringTransaction: Partial<Omit<RecurringTransaction, "id">>) =>
+    request<{ recurringTransaction: RecurringTransaction }>(`/recurring/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(recurringTransaction),
+    }, token),
+
+  deleteRecurringTransaction: (token: string, id: string) =>
+    request<void>(`/recurring/${id}`, { method: "DELETE" }, token),
 
   getSummary: (token: string) =>
     request<{
