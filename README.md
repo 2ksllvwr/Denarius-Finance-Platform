@@ -1,6 +1,6 @@
 # DENARIUS
 
-DENARIUS Finance Platform é uma aplicação financeira offline-first com experiência de SaaS: login próprio, dashboard financeiro, organização mensal, metas, recorrências, backup local, PIN de segurança, PWA instalável e API Express/MongoDB preparada para produção.
+Denarius Finance Platform é uma aplicação financeira offline-first com experiência de SaaS: login próprio, dashboard financeiro, organização mensal, metas, recorrências, backup local, PIN de segurança, PWA instalável e API Express/MongoDB preparada para produção.
 
 ![Dashboard do DENARIUS](docs/screenshots/dashboard.svg)
 
