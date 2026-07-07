@@ -1,15 +1,16 @@
 import { useEffect, useState } from "react";
-import type { Category, Transaction } from "@/data/types";
-import type { TransactionInput } from "@/hooks/useFinanceApp";
+import type { Account, Category, Transaction, TransactionStatus } from "@/data/types";
+import type { InstallmentTransactionInput } from "@/hooks/useFinanceApp";
 import { cn } from "@/utils/cn";
 import { IconArrowDown, IconArrowUp, IconX } from "@/components/Icons";
 
 interface TransactionModalProps {
   categories: Category[];
+  accounts: Account[];
   open: boolean;
   transaction?: Transaction | null;
   onClose: () => void;
-  onSubmit: (transaction: TransactionInput) => Promise<void>;
+  onSubmit: (transaction: InstallmentTransactionInput) => Promise<void>;
 }
 
 function parseAmount(value: string) {
@@ -17,15 +18,19 @@ function parseAmount(value: string) {
   return Number(normalized);
 }
 
-export function TransactionModal({ categories, open, transaction, onClose, onSubmit }: TransactionModalProps) {
+export function TransactionModal({ accounts, categories, open, transaction, onClose, onSubmit }: TransactionModalProps) {
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
     description: "",
     amount: "",
     type: "expense" as "income" | "expense",
     category: "Moradia",
-    status: "completed" as "completed" | "pending",
+    subcategory: "",
+    tags: "",
+    accountId: "",
+    status: "completed" as TransactionStatus,
     date: new Date().toISOString().split("T")[0],
+    installments: "1",
   });
 
   useEffect(() => {
@@ -36,15 +41,20 @@ export function TransactionModal({ categories, open, transaction, onClose, onSub
       amount: transaction ? String(transaction.amount).replace(".", ",") : "",
       type: transaction?.type ?? "expense",
       category: transaction?.category ?? categories[0]?.name ?? "Moradia",
+      subcategory: transaction?.subcategory ?? "",
+      tags: transaction?.tags?.join(", ") ?? "",
+      accountId: transaction?.accountId ?? accounts.find(account => account.type !== "credit")?.id ?? accounts[0]?.id ?? "",
       status: transaction?.status ?? "completed",
       date: transaction?.date ?? new Date().toISOString().split("T")[0],
+      installments: "1",
     });
-  }, [categories, open, transaction]);
+  }, [accounts, categories, open, transaction]);
 
   if (!open) return null;
 
   const amount = parseAmount(form.amount);
-  const canSubmit = form.description.trim().length >= 2 && Number.isFinite(amount) && amount > 0;
+  const installments = Math.max(1, Math.min(Number(form.installments) || 1, 60));
+  const canSubmit = form.description.trim().length >= 2 && Number.isFinite(amount) && amount > 0 && installments >= 1 && installments <= 60;
 
   const submit = async () => {
     if (!canSubmit) return;
@@ -54,11 +64,15 @@ export function TransactionModal({ categories, open, transaction, onClose, onSub
       amount,
       type: form.type,
       category: form.category,
+      subcategory: form.subcategory.trim() || undefined,
+      tags: form.tags.split(",").map(tag => tag.trim()).filter(Boolean),
+      accountId: form.accountId || undefined,
       status: form.status,
       date: form.date,
+      installments,
     });
     setSaving(false);
-    setForm({ description: "", amount: "", type: "expense", category: categories[0]?.name ?? "Moradia", status: "completed", date: new Date().toISOString().split("T")[0] });
+    setForm({ description: "", amount: "", type: "expense", category: categories[0]?.name ?? "Moradia", subcategory: "", tags: "", accountId: accounts.find(account => account.type !== "credit")?.id ?? accounts[0]?.id ?? "", status: "completed", date: new Date().toISOString().split("T")[0], installments: "1" });
     onClose();
   };
 
@@ -91,7 +105,7 @@ export function TransactionModal({ categories, open, transaction, onClose, onSub
           </label>
 
           <label className="block">
-            <span className="text-[11px] font-medium text-gray-400 block mb-1.5">Valor (R$)</span>
+            <span className="text-[11px] font-medium text-gray-400 block mb-1.5">{!transaction && installments > 1 ? "Valor total (R$)" : "Valor (R$)"}</span>
             <input inputMode="decimal" value={form.amount} onChange={event => setForm(prev => ({ ...prev, amount: event.target.value }))} placeholder="0,00" className="w-full bg-surface border border-border rounded-xl px-3.5 py-2.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all placeholder:text-gray-300" />
           </label>
 
@@ -103,10 +117,48 @@ export function TransactionModal({ categories, open, transaction, onClose, onSub
               </select>
             </label>
             <label className="block">
+              <span className="text-[11px] font-medium text-gray-400 block mb-1.5">Conta</span>
+              <select value={form.accountId} onChange={event => setForm(prev => ({ ...prev, accountId: event.target.value }))} className="w-full bg-surface border border-border rounded-xl px-3.5 py-2.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all appearance-none">
+                <option value="">Sem conta</option>
+                {accounts.map(account => <option key={account.id} value={account.id}>{account.name}</option>)}
+              </select>
+            </label>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <label className="block">
+              <span className="text-[11px] font-medium text-gray-400 block mb-1.5">Subcategoria</span>
+              <input value={form.subcategory} onChange={event => setForm(prev => ({ ...prev, subcategory: event.target.value }))} placeholder="Ex: Mercado, app, boleto" className="w-full bg-surface border border-border rounded-xl px-3.5 py-2.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all placeholder:text-gray-300" />
+            </label>
+            <label className="block">
+              <span className="text-[11px] font-medium text-gray-400 block mb-1.5">Tags</span>
+              <input value={form.tags} onChange={event => setForm(prev => ({ ...prev, tags: event.target.value }))} placeholder="Ex: casa, recorrente" className="w-full bg-surface border border-border rounded-xl px-3.5 py-2.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all placeholder:text-gray-300" />
+            </label>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <label className="block">
               <span className="text-[11px] font-medium text-gray-400 block mb-1.5">Data</span>
               <input type="date" value={form.date} onChange={event => setForm(prev => ({ ...prev, date: event.target.value }))} className="w-full bg-surface border border-border rounded-xl px-3.5 py-2.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all" />
             </label>
           </div>
+
+          {!transaction && (
+            <label className="block">
+              <span className="text-[11px] font-medium text-gray-400 block mb-1.5">Parcelas</span>
+              <input
+                type="number"
+                min={1}
+                max={60}
+                value={form.installments}
+                onChange={event => setForm(prev => ({ ...prev, installments: event.target.value }))}
+                className="w-full bg-surface border border-border rounded-xl px-3.5 py-2.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all"
+              />
+              {installments > 1 && Number.isFinite(amount) && amount > 0 && (
+                <span className="mt-1.5 block text-[11px] text-gray-400">Serão criadas {installments} parcelas de aproximadamente R$ {(amount / installments).toFixed(2).replace(".", ",")}.</span>
+              )}
+            </label>
+          )}
 
           <label className="block">
             <span className="text-[11px] font-medium text-gray-400 block mb-1.5">Status</span>

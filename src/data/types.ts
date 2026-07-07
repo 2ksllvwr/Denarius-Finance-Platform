@@ -9,14 +9,19 @@ export interface User {
   bio?: string;
 }
 
+export type TransactionStatus = "completed" | "pending" | "planned";
+
 export interface Transaction {
   id: string;
   description: string;
   amount: number;
   type: "income" | "expense";
   category: string;
+  subcategory?: string;
+  tags?: string[];
+  accountId?: string;
   date: string;
-  status: "completed" | "pending";
+  status: TransactionStatus;
   recurringId?: string;
   recurringMonth?: string;
 }
@@ -28,6 +33,17 @@ export interface Category {
   color: string;
   budget: number;
   spent: number;
+}
+
+export interface Account {
+  id: string;
+  name: string;
+  type: "checking" | "savings" | "cash" | "credit";
+  balance: number;
+  color: string;
+  closingDay?: number;
+  dueDay?: number;
+  creditLimit?: number;
 }
 
 export interface Settings {
@@ -86,7 +102,7 @@ export interface RecurringTransaction {
   type: "income" | "expense";
   category: string;
   dayOfMonth: number;
-  status: "completed" | "pending";
+  status: TransactionStatus;
   active: boolean;
   lastGeneratedMonth?: string;
 }
@@ -103,13 +119,15 @@ export interface BackupSnapshot {
 }
 
 export interface DenariusBackup {
-  app: "DENARIUS";
+  app: "Denarius";
   version: 1;
   exportedAt: string;
   user: User;
   transactions: Transaction[];
   categories: Category[];
   settings: Settings;
+  accounts: Account[];
+  deletedTransactions: Transaction[];
   monthlyGoals: MonthlyGoal[];
   monthlyClosures: MonthlyClosure[];
   recurringTransactions: RecurringTransaction[];
@@ -129,7 +147,7 @@ export interface MonthlyPoint {
   expense: number;
 }
 
-export type Page = "dashboard" | "monthly" | "transactions" | "categories" | "settings" | "billing";
+export type Page = "dashboard" | "insights" | "monthly" | "transactions" | "accounts" | "categories" | "settings" | "billing";
 
 export const formatCurrency = (value: number, currency = "BRL") =>
   new Intl.NumberFormat("pt-BR", {
@@ -168,6 +186,11 @@ export const INITIAL_CATEGORIES: Category[] = [
   { id: "6", name: "Investimentos", icon: "📈", color: "#8b5cf6", budget: 2000, spent: 0 },
   { id: "7", name: "Trabalho", icon: "💼", color: "#059669", budget: 0, spent: 0 },
   { id: "8", name: "Freelance", icon: "🖥️", color: "#0ea5e9", budget: 0, spent: 0 },
+];
+
+export const INITIAL_ACCOUNTS: Account[] = [
+  { id: "main", name: "Conta principal", type: "checking", balance: 0, color: "#3b6cf5" },
+  { id: "cash", name: "Dinheiro", type: "cash", balance: 0, color: "#10b981" },
 ];
 
 export const DEFAULT_SETTINGS: Settings = {

@@ -55,7 +55,7 @@ export function OnboardingPage({ user, currency, onComplete, onLogout }: Onboard
             Ajuste seu mês antes do primeiro lançamento.
           </h1>
           <p className="mt-5 max-w-lg text-sm sm:text-base leading-7 text-white/55">
-            Olá, {user.name}. Em menos de um minuto o DENARIUS cria suas metas iniciais e deixa seu painel pronto para acompanhamento mensal.
+            Olá, {user.name}. Em menos de um minuto o Denarius cria suas metas iniciais e deixa seu painel pronto para acompanhamento mensal.
           </p>
         </div>
 
@@ -94,7 +94,7 @@ export function OnboardingPage({ user, currency, onComplete, onLogout }: Onboard
           </div>
 
           <button onClick={() => void finish()} disabled={saving} className="mt-6 w-full bg-gray-900 text-white rounded-xl py-3 text-sm font-semibold hover:bg-gray-800 disabled:opacity-50 transition-all flex items-center justify-center gap-2">
-            <IconCheck size={16} /> {saving ? "Configurando..." : "Entrar no DENARIUS"}
+            <IconCheck size={16} /> {saving ? "Configurando..." : "Entrar no Denarius"}
           </button>
         </div>
       </section>

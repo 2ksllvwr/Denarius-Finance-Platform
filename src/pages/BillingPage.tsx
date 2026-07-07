@@ -21,7 +21,7 @@ export function BillingPage({ currentPlan, onChangePlan }: BillingPageProps) {
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,#3b6cf544,transparent_35%)]" />
         <div className="relative max-w-2xl">
           <div className="inline-flex items-center gap-2 rounded-full bg-white/10 border border-white/10 px-3 py-1.5 text-xs text-white/70 mb-4"><IconShield size={14} /> Módulo de assinatura preparado</div>
-          <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight">Planos do DENARIUS</h2>
+          <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight">Planos do Denarius</h2>
           <p className="text-sm text-white/55 mt-2 leading-6">A troca de plano fica salva na sua conta deste dispositivo. O checkout permanece como ponto de integração para Stripe, Mercado Pago ou outro gateway.</p>
         </div>
       </div>

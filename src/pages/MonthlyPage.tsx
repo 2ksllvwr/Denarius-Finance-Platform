@@ -4,12 +4,8 @@ import {
   IconArrowUp,
   IconCalendar,
   IconCheck,
-  IconClock,
   IconPlus,
   IconTrash,
-  IconTrendDown,
-  IconTrendUp,
-  IconWallet,
 } from "@/components/Icons";
 import type { Category, MonthlyClosure, MonthlyGoal, RecurringTransaction, Stats, Transaction } from "@/data/types";
 import { formatCurrency, formatDateFull } from "@/data/types";
@@ -169,23 +165,6 @@ export function MonthlyPage({
               <p className="text-sm text-gray-400 mt-1">{transactions.length} movimentações registradas no período</p>
             </div>
             <span className={cn("w-fit px-3 py-1.5 rounded-full text-[12px] font-semibold", healthTone)}>{healthLabel}</span>
-          </div>
-
-          <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 mt-5">
-            {[
-              { label: "Saldo", value: stats.balance, icon: IconWallet, color: stats.balance >= 0 ? "text-success-600" : "text-danger-600" },
-              { label: "Receitas", value: stats.income, icon: IconTrendUp, color: "text-success-600" },
-              { label: "Despesas", value: stats.expense, icon: IconTrendDown, color: "text-danger-600" },
-              { label: "Pendentes", value: stats.pending, icon: IconClock, color: "text-warning-500" },
-            ].map(item => (
-              <div key={item.label} className="rounded-2xl border border-border bg-surface p-4">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-[11px] font-medium text-gray-400 uppercase">{item.label}</span>
-                  <item.icon size={15} className={item.color} />
-                </div>
-                <p className={cn("mt-3 text-lg font-bold tabular-nums", item.color)}>{formatCurrency(item.value, currency)}</p>
-              </div>
-            ))}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-5">

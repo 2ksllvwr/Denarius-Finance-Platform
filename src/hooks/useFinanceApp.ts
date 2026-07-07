@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   type AppNotification,
+  type Account,
   type BackupSnapshot,
   DEFAULT_SETTINGS,
   type DenariusBackup,
+  INITIAL_ACCOUNTS,
   INITIAL_CATEGORIES,
   type Category,
   type MonthlyClosure,
@@ -12,6 +14,7 @@ import {
   type RecurringTransaction,
   type Settings,
   type Transaction,
+  type TransactionStatus,
   type User,
 } from "@/data/types";
 import { createBackupSnapshot, downloadBackupFile, parseBackupFile } from "@/utils/backup";
@@ -27,7 +30,7 @@ import {
 import { readLocalStorage, writeLocalStorage } from "@/utils/localStore";
 
 type Mode = "api" | "local";
-type WorkspaceResource = "transactions" | "categories" | "settings" | "notifications" | "monthlyGoals" | "monthlyClosures" | "recurringTransactions" | "backupSnapshots";
+type WorkspaceResource = "transactions" | "deletedTransactions" | "categories" | "accounts" | "settings" | "notifications" | "monthlyGoals" | "monthlyClosures" | "recurringTransactions" | "backupSnapshots";
 
 const TOKEN_KEY = "fluxo.token";
 const MODE_KEY = "fluxo.mode";
@@ -36,7 +39,9 @@ const workspaceKey = (userId: string, resource: WorkspaceResource) => `fluxo.loc
 
 interface WorkspaceData {
   transactions: Transaction[];
+  deletedTransactions: Transaction[];
   categories: Category[];
+  accounts: Account[];
   settings: Settings;
   notifications: AppNotification[];
   monthlyGoals: MonthlyGoal[];
@@ -50,8 +55,25 @@ export interface TransactionInput {
   amount: number;
   type: "income" | "expense";
   category: string;
+  subcategory?: string;
+  tags?: string[];
+  accountId?: string;
   date: string;
-  status: "completed" | "pending";
+  status: TransactionStatus;
+}
+
+export interface InstallmentTransactionInput extends TransactionInput {
+  installments: number;
+}
+
+export interface AccountInput {
+  name: string;
+  type: Account["type"];
+  balance: number;
+  color: string;
+  closingDay?: number;
+  dueDay?: number;
+  creditLimit?: number;
 }
 
 export interface MonthlyGoalInput {
@@ -67,7 +89,7 @@ export interface RecurringTransactionInput {
   type: "income" | "expense";
   category: string;
   dayOfMonth: number;
-  status: "completed" | "pending";
+  status: TransactionStatus;
   active: boolean;
 }
 
@@ -79,6 +101,7 @@ export interface OnboardingInput {
 }
 
 const createInitialCategories = () => INITIAL_CATEGORIES.map(category => ({ ...category, spent: 0 }));
+const createInitialAccounts = () => INITIAL_ACCOUNTS.map(account => ({ ...account }));
 
 const normalizeSettings = (settings: Partial<Settings> | undefined): Settings => ({
   ...DEFAULT_SETTINGS,
@@ -93,17 +116,25 @@ function ensureCategoryList(categories: Category[], categoryNames: string[]) {
     .filter(name => name.trim().length > 0 && !existing.has(name))
     .map(name => {
       existing.add(name);
-      return { id: crypto.randomUUID(), name, icon: "📌", color: "#6366f1", budget: 0, spent: 0 };
+      return { id: crypto.randomUUID(), name, icon: "ðŸ“Œ", color: "#6366f1", budget: 0, spent: 0 };
     });
 
   return additions.length > 0 ? [...categories, ...additions] : categories;
+}
+
+function shiftDateByMonths(date: string, offset: number) {
+  const [year, month, day] = date.split("-").map(Number);
+  const target = new Date(year || new Date().getFullYear(), (month || 1) - 1 + offset, 1);
+  return getDateInMonth(getMonthKey(target), day || 1);
 }
 
 function readWorkspace(user: User | null): WorkspaceData {
   if (!user) {
     return {
       transactions: [],
+      deletedTransactions: [],
       categories: createInitialCategories(),
+      accounts: createInitialAccounts(),
       settings: { ...DEFAULT_SETTINGS },
       notifications: [],
       monthlyGoals: [],
@@ -114,12 +145,16 @@ function readWorkspace(user: User | null): WorkspaceData {
   }
 
   const transactions = readLocalStorage<Transaction[]>(workspaceKey(user.id, "transactions"), []);
+  const deletedTransactions = readLocalStorage<Transaction[]>(workspaceKey(user.id, "deletedTransactions"), []);
   const categories = readLocalStorage<Category[]>(workspaceKey(user.id, "categories"), createInitialCategories());
+  const accounts = readLocalStorage<Account[]>(workspaceKey(user.id, "accounts"), createInitialAccounts());
   const settings = normalizeSettings(readLocalStorage<Partial<Settings>>(workspaceKey(user.id, "settings"), DEFAULT_SETTINGS));
 
   return {
     transactions,
+    deletedTransactions,
     categories: applyCategorySpent(categories, transactions),
+    accounts,
     settings,
     notifications: readLocalStorage<AppNotification[]>(workspaceKey(user.id, "notifications"), []),
     monthlyGoals: readLocalStorage<MonthlyGoal[]>(workspaceKey(user.id, "monthlyGoals"), []),
@@ -134,8 +169,16 @@ function writeWorkspace(user: User, workspace: Partial<WorkspaceData>) {
     writeLocalStorage(workspaceKey(user.id, "transactions"), workspace.transactions);
   }
 
+  if (workspace.deletedTransactions !== undefined) {
+    writeLocalStorage(workspaceKey(user.id, "deletedTransactions"), workspace.deletedTransactions);
+  }
+
   if (workspace.categories !== undefined) {
     writeLocalStorage(workspaceKey(user.id, "categories"), workspace.categories);
+  }
+
+  if (workspace.accounts !== undefined) {
+    writeLocalStorage(workspaceKey(user.id, "accounts"), workspace.accounts);
   }
 
   if (workspace.settings !== undefined) {
@@ -171,7 +214,9 @@ export function useFinanceApp() {
   const [token] = useState<string | null>(null);
   const [user, setUser] = useState<User | null>(activeUser);
   const [transactions, setTransactions] = useState<Transaction[]>(activeWorkspace.transactions);
+  const [deletedTransactions, setDeletedTransactions] = useState<Transaction[]>(activeWorkspace.deletedTransactions);
   const [categories, setCategories] = useState<Category[]>(activeWorkspace.categories);
+  const [accounts, setAccounts] = useState<Account[]>(activeWorkspace.accounts);
   const [settings, setSettings] = useState<Settings>(activeWorkspace.settings);
   const [notifications, setNotifications] = useState<AppNotification[]>(activeWorkspace.notifications);
   const [monthlyGoals, setMonthlyGoals] = useState<MonthlyGoal[]>(activeWorkspace.monthlyGoals);
@@ -191,7 +236,9 @@ export function useFinanceApp() {
   const loadWorkspace = useCallback((nextUser: User) => {
     const nextWorkspace = readWorkspace(nextUser);
     setTransactions(nextWorkspace.transactions);
+    setDeletedTransactions(nextWorkspace.deletedTransactions);
     setCategories(nextWorkspace.categories);
+    setAccounts(nextWorkspace.accounts);
     setSettings(nextWorkspace.settings);
     setNotifications(nextWorkspace.notifications);
     setMonthlyGoals(nextWorkspace.monthlyGoals);
@@ -250,18 +297,20 @@ export function useFinanceApp() {
     if (!targetUser) return null;
 
     return {
-      app: "DENARIUS",
+      app: "Denarius",
       version: 1,
       exportedAt: new Date().toISOString(),
       user: targetUser,
       transactions: overrides.transactions ?? transactions,
+      deletedTransactions: overrides.deletedTransactions ?? deletedTransactions,
       categories: overrides.categories ?? categories,
+      accounts: overrides.accounts ?? accounts,
       settings: overrides.settings ?? settings,
       monthlyGoals: overrides.monthlyGoals ?? monthlyGoals,
       monthlyClosures: overrides.monthlyClosures ?? monthlyClosures,
       recurringTransactions: overrides.recurringTransactions ?? recurringTransactions,
     };
-  }, [categories, monthlyClosures, monthlyGoals, recurringTransactions, settings, transactions, user]);
+  }, [accounts, categories, deletedTransactions, monthlyClosures, monthlyGoals, recurringTransactions, settings, transactions, user]);
 
   const saveBackupSnapshot = useCallback((reason: BackupSnapshot["reason"], overrides: Partial<WorkspaceData> = {}, targetUser = user) => {
     const backup = buildBackup(overrides, targetUser);
@@ -321,12 +370,14 @@ export function useFinanceApp() {
       const nextUser = await createLocalAccount({ name, email, password });
       const nextWorkspace = {
         transactions: [],
+        deletedTransactions: [],
         categories: createInitialCategories(),
+        accounts: createInitialAccounts(),
         settings: { ...DEFAULT_SETTINGS },
         notifications: [{
           id: crypto.randomUUID(),
           title: "Conta criada",
-          message: "Seu perfil offline está pronto para uso.",
+          message: "Seu perfil offline estÃ¡ pronto para uso.",
           kind: "success" as const,
           createdAt: new Date().toISOString(),
           read: false,
@@ -343,7 +394,9 @@ export function useFinanceApp() {
       writeWorkspace(nextUser, nextWorkspace);
       setUser(nextUser);
       setTransactions(nextWorkspace.transactions);
+      setDeletedTransactions(nextWorkspace.deletedTransactions);
       setCategories(nextWorkspace.categories);
+      setAccounts(nextWorkspace.accounts);
       setSettings(nextWorkspace.settings);
       setNotifications(nextWorkspace.notifications);
       setMonthlyGoals(nextWorkspace.monthlyGoals);
@@ -362,14 +415,14 @@ export function useFinanceApp() {
 
   const logout = useCallback(() => {
     if (user) {
-      persistWorkspace({ transactions, categories, settings, notifications, monthlyGoals, monthlyClosures, recurringTransactions, backupSnapshots }, user);
+      persistWorkspace({ transactions, deletedTransactions, categories, accounts, settings, notifications, monthlyGoals, monthlyClosures, recurringTransactions, backupSnapshots }, user);
     }
 
     localStorage.removeItem(TOKEN_KEY);
     writeLocalStorage(MODE_KEY, "local");
     writeActiveLocalUser(null);
     setUser(null);
-  }, [backupSnapshots, categories, monthlyClosures, monthlyGoals, notifications, persistWorkspace, recurringTransactions, settings, transactions, user]);
+  }, [accounts, backupSnapshots, categories, deletedTransactions, monthlyClosures, monthlyGoals, notifications, persistWorkspace, recurringTransactions, settings, transactions, user]);
 
   const addTransaction = useCallback(async (input: TransactionInput) => {
     const transactionMonth = input.date.slice(0, 7);
@@ -380,7 +433,7 @@ export function useFinanceApp() {
     const categoryExists = categories.some(category => category.name === input.category);
     const nextCategories = categoryExists
       ? categories
-      : [...categories, { id: crypto.randomUUID(), name: input.category, icon: "📌", color: "#6366f1", budget: 0, spent: 0 }];
+      : [...categories, { id: crypto.randomUUID(), name: input.category, icon: "ðŸ“Œ", color: "#6366f1", budget: 0, spent: 0 }];
     const nextCategoriesWithSpent = applyCategorySpent(nextCategories, nextTransactions);
 
     setTransactions(nextTransactions);
@@ -402,14 +455,54 @@ export function useFinanceApp() {
 
           if (previousPct < 80 && nextPct >= 80) {
             pushNotification({
-              title: nextPct >= 100 ? "Orçamento estourado" : "Orçamento em atenção",
-              message: `${category.name} chegou a ${Math.round(nextPct)}% do orçamento.`,
+              title: nextPct >= 100 ? "OrÃ§amento estourado" : "OrÃ§amento em atenÃ§Ã£o",
+              message: `${category.name} chegou a ${Math.round(nextPct)}% do orÃ§amento.`,
               kind: "warning",
             });
           }
         });
     }
   }, [categories, persistWorkspace, pushNotification, settings.notifBudget, transactions]);
+
+  const addInstallmentTransaction = useCallback(async (input: InstallmentTransactionInput) => {
+    const installments = Math.max(1, Math.min(Math.round(input.installments), 60));
+    if (installments <= 1) {
+      await addTransaction(input);
+      return;
+    }
+
+    const baseAmount = Math.floor((input.amount / installments) * 100) / 100;
+    const generatedTransactions: Transaction[] = Array.from({ length: installments }, (_, index) => {
+      const amount = index === installments - 1
+        ? Math.round((input.amount - baseAmount * (installments - 1)) * 100) / 100
+        : baseAmount;
+
+      return {
+        id: crypto.randomUUID(),
+        description: `${input.description.trim()} (${index + 1}/${installments})`,
+        amount,
+        type: input.type,
+        category: input.category,
+        subcategory: input.subcategory,
+        tags: input.tags,
+        accountId: input.accountId,
+        date: shiftDateByMonths(input.date, index),
+        status: input.status,
+      };
+    });
+    const nextTransactions = [...generatedTransactions, ...transactions];
+    const nextCategories = applyCategorySpent(ensureCategoryList(categories, [input.category]), nextTransactions);
+
+    setTransactions(nextTransactions);
+    setCategories(nextCategories);
+    persistWorkspace({ transactions: nextTransactions, categories: nextCategories });
+    saveBackupSnapshot("auto", { transactions: nextTransactions, categories: nextCategories });
+    pushNotification({
+      title: "Parcelamento criado",
+      message: `${installments} parcelas de ${input.description.trim()} foram adicionadas.`,
+      kind: input.type === "income" ? "success" : "info",
+    });
+  }, [addTransaction, categories, persistWorkspace, pushNotification, saveBackupSnapshot, transactions]);
 
   const importTransactions = useCallback(async (inputs: TransactionInput[]) => {
     const validInputs = inputs.filter(input => (
@@ -420,16 +513,20 @@ export function useFinanceApp() {
     ));
 
     if (validInputs.length === 0) {
-      pushNotification({ title: "Importação vazia", message: "Nenhuma linha válida foi encontrada no arquivo.", kind: "warning" });
+      pushNotification({ title: "ImportaÃ§Ã£o vazia", message: "Nenhuma linha vÃ¡lida foi encontrada no arquivo.", kind: "warning" });
       return;
     }
 
+    const defaultAccountId = accounts.find(account => account.type !== "credit")?.id ?? accounts[0]?.id;
     const importedTransactions: Transaction[] = validInputs.map(input => ({
       id: crypto.randomUUID(),
       description: input.description.trim(),
       amount: input.amount,
       type: input.type,
       category: input.category.trim(),
+      subcategory: input.subcategory?.trim() || undefined,
+      tags: input.tags?.map(tag => tag.trim()).filter(Boolean),
+      accountId: input.accountId ?? defaultAccountId,
       date: input.date,
       status: input.status,
     }));
@@ -440,21 +537,55 @@ export function useFinanceApp() {
     setCategories(nextCategories);
     persistWorkspace({ transactions: nextTransactions, categories: nextCategories });
     pushNotification({
-      title: "Importação concluída",
-      message: `${importedTransactions.length} transações foram adicionadas ao DENARIUS.`,
+      title: "ImportaÃ§Ã£o concluÃ­da",
+      message: `${importedTransactions.length} transaÃ§Ãµes foram adicionadas ao Denarius.`,
       kind: "success",
     });
-  }, [categories, persistWorkspace, pushNotification, transactions]);
+  }, [accounts, categories, persistWorkspace, pushNotification, transactions]);
 
   const deleteTransaction = useCallback(async (id: string) => {
+    const deletedTransaction = transactions.find(transaction => transaction.id === id);
+    if (!deletedTransaction) return;
+
     const nextTransactions = transactions.filter(transaction => transaction.id !== id);
+    const nextDeletedTransactions = [deletedTransaction, ...deletedTransactions];
     const nextCategories = applyCategorySpent(categories, nextTransactions);
 
     setTransactions(nextTransactions);
+    setDeletedTransactions(nextDeletedTransactions);
     setCategories(nextCategories);
-    persistWorkspace({ transactions: nextTransactions, categories: nextCategories });
-    pushNotification({ title: "Transação removida", message: "O lançamento saiu da sua lista.", kind: "info" });
-  }, [categories, persistWorkspace, pushNotification, transactions]);
+    persistWorkspace({ transactions: nextTransactions, deletedTransactions: nextDeletedTransactions, categories: nextCategories });
+    pushNotification({ title: "Transacao movida para lixeira", message: "Voce pode restaurar em Ajustes > Dados.", kind: "info" });
+  }, [categories, deletedTransactions, persistWorkspace, pushNotification, transactions]);
+
+  const restoreTransaction = useCallback(async (id: string) => {
+    const restoredTransaction = deletedTransactions.find(transaction => transaction.id === id);
+    if (!restoredTransaction) return;
+
+    const nextDeletedTransactions = deletedTransactions.filter(transaction => transaction.id !== id);
+    const nextTransactions = [restoredTransaction, ...transactions];
+    const nextCategories = applyCategorySpent(categories, nextTransactions);
+
+    setDeletedTransactions(nextDeletedTransactions);
+    setTransactions(nextTransactions);
+    setCategories(nextCategories);
+    persistWorkspace({ transactions: nextTransactions, deletedTransactions: nextDeletedTransactions, categories: nextCategories });
+    pushNotification({ title: "Transacao restaurada", message: "O lancamento voltou para sua lista.", kind: "success" });
+  }, [categories, deletedTransactions, persistWorkspace, pushNotification, transactions]);
+
+  const deleteTransactionForever = useCallback(async (id: string) => {
+    const nextDeletedTransactions = deletedTransactions.filter(transaction => transaction.id !== id);
+
+    setDeletedTransactions(nextDeletedTransactions);
+    persistWorkspace({ deletedTransactions: nextDeletedTransactions });
+    pushNotification({ title: "Transacao apagada", message: "O item foi removido definitivamente.", kind: "warning" });
+  }, [deletedTransactions, persistWorkspace, pushNotification]);
+
+  const emptyTrash = useCallback(async () => {
+    setDeletedTransactions([]);
+    persistWorkspace({ deletedTransactions: [] });
+    pushNotification({ title: "Lixeira esvaziada", message: "Todos os itens da lixeira foram removidos.", kind: "warning" });
+  }, [persistWorkspace, pushNotification]);
 
   const updateTransaction = useCallback(async (id: string, input: TransactionInput) => {
     const nextTransactions = transactions.map(transaction => transaction.id === id ? { ...transaction, ...input } : transaction);
@@ -464,7 +595,7 @@ export function useFinanceApp() {
     setCategories(nextCategories);
     persistWorkspace({ transactions: nextTransactions, categories: nextCategories });
     saveBackupSnapshot("auto", { transactions: nextTransactions, categories: nextCategories });
-    pushNotification({ title: "Transação atualizada", message: `${input.description} foi salvo.`, kind: "success" });
+    pushNotification({ title: "TransaÃ§Ã£o atualizada", message: `${input.description} foi salvo.`, kind: "success" });
   }, [categories, persistWorkspace, pushNotification, saveBackupSnapshot, transactions]);
 
   const duplicateTransaction = useCallback(async (id: string) => {
@@ -474,7 +605,7 @@ export function useFinanceApp() {
     const duplicated: Transaction = {
       ...transaction,
       id: crypto.randomUUID(),
-      description: `${transaction.description} (cópia)`,
+      description: `${transaction.description} (cÃ³pia)`,
       recurringId: undefined,
       recurringMonth: undefined,
     };
@@ -485,7 +616,7 @@ export function useFinanceApp() {
     setCategories(nextCategories);
     persistWorkspace({ transactions: nextTransactions, categories: nextCategories });
     saveBackupSnapshot("auto", { transactions: nextTransactions, categories: nextCategories });
-    pushNotification({ title: "Transação duplicada", message: `${transaction.description} foi copiada.`, kind: "success" });
+    pushNotification({ title: "TransaÃ§Ã£o duplicada", message: `${transaction.description} foi copiada.`, kind: "success" });
   }, [categories, persistWorkspace, pushNotification, saveBackupSnapshot, transactions]);
 
   const toggleTransactionStatus = useCallback(async (id: string) => {
@@ -500,12 +631,14 @@ export function useFinanceApp() {
 
   const clearTransactions = useCallback(async () => {
     const nextCategories = applyCategorySpent(categories, []);
+    const nextDeletedTransactions = [...transactions, ...deletedTransactions];
 
     setTransactions([]);
+    setDeletedTransactions(nextDeletedTransactions);
     setCategories(nextCategories);
-    persistWorkspace({ transactions: [], categories: nextCategories });
-    pushNotification({ title: "Dados limpos", message: "Todas as transações foram removidas.", kind: "warning" });
-  }, [categories, persistWorkspace, pushNotification]);
+    persistWorkspace({ transactions: [], deletedTransactions: nextDeletedTransactions, categories: nextCategories });
+    pushNotification({ title: "Dados movidos para lixeira", message: "As transacoes podem ser restauradas em Ajustes > Dados.", kind: "warning" });
+  }, [categories, deletedTransactions, persistWorkspace, pushNotification, transactions]);
 
   const exportBackup = useCallback(async () => {
     if (!user) return;
@@ -541,17 +674,23 @@ export function useFinanceApp() {
       lastBackupAt: new Date().toISOString(),
     });
     const nextCategories = applyCategorySpent(backup.categories, backup.transactions);
+    const nextAccounts = backup.accounts ?? createInitialAccounts();
+    const nextDeletedTransactions = backup.deletedTransactions ?? [];
 
     setUser(importedUser);
     setTransactions(backup.transactions);
+    setDeletedTransactions(nextDeletedTransactions);
     setCategories(nextCategories);
+    setAccounts(nextAccounts);
     setSettings(nextSettings);
     setMonthlyGoals(backup.monthlyGoals);
     setMonthlyClosures(backup.monthlyClosures);
     setRecurringTransactions(backup.recurringTransactions);
     writeWorkspace(importedUser, {
       transactions: backup.transactions,
+      deletedTransactions: nextDeletedTransactions,
       categories: nextCategories,
+      accounts: nextAccounts,
       settings: nextSettings,
       monthlyGoals: backup.monthlyGoals,
       monthlyClosures: backup.monthlyClosures,
@@ -559,7 +698,9 @@ export function useFinanceApp() {
     });
     saveBackupSnapshot("import", {
       transactions: backup.transactions,
+      deletedTransactions: nextDeletedTransactions,
       categories: nextCategories,
+      accounts: nextAccounts,
       settings: nextSettings,
       monthlyGoals: backup.monthlyGoals,
       monthlyClosures: backup.monthlyClosures,
@@ -575,7 +716,7 @@ export function useFinanceApp() {
     setSettings(nextSettings);
     persistWorkspace({ settings: nextSettings });
     saveBackupSnapshot("manual", { settings: nextSettings });
-    pushNotification({ title: "Snapshot criado", message: "Uma cópia local foi salva neste navegador.", kind: "success" });
+    pushNotification({ title: "Snapshot criado", message: "Uma cÃ³pia local foi salva neste navegador.", kind: "success" });
   }, [persistWorkspace, pushNotification, saveBackupSnapshot, settings]);
 
   const restoreSnapshot = useCallback(async (id: string) => {
@@ -588,27 +729,33 @@ export function useFinanceApp() {
       lastBackupAt: new Date().toISOString(),
     });
     const nextCategories = applyCategorySpent(backup.categories, backup.transactions);
+    const nextAccounts = backup.accounts ?? createInitialAccounts();
+    const nextDeletedTransactions = backup.deletedTransactions ?? [];
 
     setTransactions(backup.transactions);
+    setDeletedTransactions(nextDeletedTransactions);
     setCategories(nextCategories);
+    setAccounts(nextAccounts);
     setSettings(nextSettings);
     setMonthlyGoals(backup.monthlyGoals);
     setMonthlyClosures(backup.monthlyClosures);
     setRecurringTransactions(backup.recurringTransactions);
     writeWorkspace(user, {
       transactions: backup.transactions,
+      deletedTransactions: nextDeletedTransactions,
       categories: nextCategories,
+      accounts: nextAccounts,
       settings: nextSettings,
       monthlyGoals: backup.monthlyGoals,
       monthlyClosures: backup.monthlyClosures,
       recurringTransactions: backup.recurringTransactions,
     });
-    pushNotification({ title: "Snapshot restaurado", message: "Os dados locais voltaram para a versão escolhida.", kind: "success" });
+    pushNotification({ title: "Snapshot restaurado", message: "Os dados locais voltaram para a versÃ£o escolhida.", kind: "success" });
   }, [backupSnapshots, pushNotification, user]);
 
   const setSecurityPin = useCallback(async (pin: string) => {
     if (!/^\d{4,8}$/.test(pin)) {
-      throw new Error("O PIN precisa ter entre 4 e 8 números.");
+      throw new Error("O PIN precisa ter entre 4 e 8 nÃºmeros.");
     }
 
     const pinSalt = createSalt();
@@ -618,7 +765,7 @@ export function useFinanceApp() {
     setSettings(nextSettings);
     setLocked(false);
     persistWorkspace({ settings: nextSettings });
-    pushNotification({ title: "PIN ativado", message: "O bloqueio local já está protegendo sua sessão.", kind: "success" });
+    pushNotification({ title: "PIN ativado", message: "O bloqueio local jÃ¡ estÃ¡ protegendo sua sessÃ£o.", kind: "success" });
   }, [persistWorkspace, pushNotification, settings]);
 
   const clearSecurityPin = useCallback(async () => {
@@ -666,7 +813,7 @@ export function useFinanceApp() {
     setMonthlyGoals(nextGoals);
     persistWorkspace({ settings: nextSettings, monthlyGoals: nextGoals });
     saveBackupSnapshot("auto", { settings: nextSettings, monthlyGoals: nextGoals });
-    pushNotification({ title: "Primeira configuração concluída", message: "Seu DENARIUS já está ajustado para o mês.", kind: "success" });
+    pushNotification({ title: "Primeira configuraÃ§Ã£o concluÃ­da", message: "Seu Denarius jÃ¡ estÃ¡ ajustado para o mÃªs.", kind: "success" });
   }, [monthlyGoals, persistWorkspace, pushNotification, saveBackupSnapshot, selectedMonth, settings]);
 
   const saveMonthlyGoal = useCallback(async (input: MonthlyGoalInput) => {
@@ -703,7 +850,7 @@ export function useFinanceApp() {
 
     setMonthlyClosures(nextClosures);
     persistWorkspace({ monthlyClosures: nextClosures });
-    pushNotification({ title: "Mês fechado", message: `${selectedMonthLabel} foi salvo como fechamento mensal.`, kind: "success" });
+    pushNotification({ title: "MÃªs fechado", message: `${selectedMonthLabel} foi salvo como fechamento mensal.`, kind: "success" });
   }, [monthlyClosures, persistWorkspace, pushNotification, selectedMonth, selectedMonthLabel, stats.balance, stats.count, stats.expense, stats.income, stats.pending]);
 
   const reopenSelectedMonth = useCallback(async () => {
@@ -711,7 +858,7 @@ export function useFinanceApp() {
 
     setMonthlyClosures(nextClosures);
     persistWorkspace({ monthlyClosures: nextClosures });
-    pushNotification({ title: "Mês reaberto", message: `${selectedMonthLabel} voltou para edição normal.`, kind: "info" });
+    pushNotification({ title: "MÃªs reaberto", message: `${selectedMonthLabel} voltou para ediÃ§Ã£o normal.`, kind: "info" });
   }, [monthlyClosures, persistWorkspace, pushNotification, selectedMonth, selectedMonthLabel]);
 
   const addRecurringTransaction = useCallback(async (input: RecurringTransactionInput) => {
@@ -731,7 +878,7 @@ export function useFinanceApp() {
     setRecurringTransactions(nextRecurring);
     setCategories(nextCategories);
     persistWorkspace({ recurringTransactions: nextRecurring, categories: nextCategories });
-    pushNotification({ title: "Recorrência criada", message: `${recurring.description} já pode ser gerada mensalmente.`, kind: "success" });
+    pushNotification({ title: "RecorrÃªncia criada", message: `${recurring.description} jÃ¡ pode ser gerada mensalmente.`, kind: "success" });
   }, [categories, persistWorkspace, pushNotification, recurringTransactions]);
 
   const toggleRecurringTransaction = useCallback(async (id: string) => {
@@ -746,7 +893,7 @@ export function useFinanceApp() {
 
     setRecurringTransactions(nextRecurring);
     persistWorkspace({ recurringTransactions: nextRecurring });
-    pushNotification({ title: "Recorrência removida", message: "A regra mensal saiu da sua lista.", kind: "info" });
+    pushNotification({ title: "RecorrÃªncia removida", message: "A regra mensal saiu da sua lista.", kind: "info" });
   }, [persistWorkspace, pushNotification, recurringTransactions]);
 
   const generateRecurringForSelectedMonth = useCallback(async () => {
@@ -756,7 +903,7 @@ export function useFinanceApp() {
     ));
 
     if (activeRecurring.length === 0) {
-      pushNotification({ title: "Nada para gerar", message: "Todas as recorrências ativas já existem neste mês.", kind: "info" });
+      pushNotification({ title: "Nada para gerar", message: "Todas as recorrÃªncias ativas jÃ¡ existem neste mÃªs.", kind: "info" });
       return;
     }
 
@@ -766,6 +913,7 @@ export function useFinanceApp() {
       amount: item.amount,
       type: item.type,
       category: item.category,
+      accountId: undefined,
       date: getDateInMonth(selectedMonth, item.dayOfMonth),
       status: item.status,
       recurringId: item.id,
@@ -780,8 +928,8 @@ export function useFinanceApp() {
     setCategories(nextCategories);
     persistWorkspace({ transactions: nextTransactions, recurringTransactions: nextRecurring, categories: nextCategories });
     pushNotification({
-      title: "Recorrências geradas",
-      message: `${generatedTransactions.length} lançamentos foram criados em ${selectedMonthLabel}.`,
+      title: "RecorrÃªncias geradas",
+      message: `${generatedTransactions.length} lanÃ§amentos foram criados em ${selectedMonthLabel}.`,
       kind: "success",
     });
   }, [categories, persistWorkspace, pushNotification, recurringTransactions, selectedMonth, selectedMonthLabel, transactions]);
@@ -792,7 +940,7 @@ export function useFinanceApp() {
     setSettings(normalizedSettings);
     persistWorkspace({ settings: normalizedSettings });
     saveBackupSnapshot("auto", { settings: normalizedSettings });
-    pushNotification({ title: "Preferências salvas", message: "Suas configurações foram atualizadas.", kind: "success" });
+    pushNotification({ title: "PreferÃªncias salvas", message: "Suas configuraÃ§Ãµes foram atualizadas.", kind: "success" });
   }, [persistWorkspace, pushNotification, saveBackupSnapshot]);
 
   const updateProfile = useCallback(async (profile: ProfileInput) => {
@@ -817,7 +965,7 @@ export function useFinanceApp() {
 
     setCategories(nextCategories);
     persistWorkspace({ categories: nextCategories });
-    pushNotification({ title: "Categoria criada", message: `${category.name} já está disponível para lançamentos.`, kind: "success" });
+    pushNotification({ title: "Categoria criada", message: `${category.name} jÃ¡ estÃ¡ disponÃ­vel para lanÃ§amentos.`, kind: "success" });
   }, [categories, persistWorkspace, pushNotification]);
 
   const updateCategory = useCallback(async (id: string, category: Partial<Omit<Category, "id" | "spent">>) => {
@@ -825,7 +973,7 @@ export function useFinanceApp() {
 
     setCategories(nextCategories);
     persistWorkspace({ categories: nextCategories });
-    pushNotification({ title: "Categoria atualizada", message: "As mudanças já foram salvas.", kind: "success" });
+    pushNotification({ title: "Categoria atualizada", message: "As mudanÃ§as jÃ¡ foram salvas.", kind: "success" });
   }, [categories, persistWorkspace, pushNotification]);
 
   const deleteCategory = useCallback(async (id: string) => {
@@ -836,6 +984,33 @@ export function useFinanceApp() {
     pushNotification({ title: "Categoria removida", message: "A categoria saiu da sua lista.", kind: "info" });
   }, [categories, persistWorkspace, pushNotification]);
 
+  const addAccount = useCallback(async (input: AccountInput) => {
+    const nextAccounts = [{ id: crypto.randomUUID(), ...input }, ...accounts];
+
+    setAccounts(nextAccounts);
+    persistWorkspace({ accounts: nextAccounts });
+    saveBackupSnapshot("auto", { accounts: nextAccounts });
+    pushNotification({ title: "Conta criada", message: `${input.name} foi adicionada ao seu mapa financeiro.`, kind: "success" });
+  }, [accounts, persistWorkspace, pushNotification, saveBackupSnapshot]);
+
+  const updateAccount = useCallback(async (id: string, input: AccountInput) => {
+    const nextAccounts = accounts.map(account => account.id === id ? { ...account, ...input } : account);
+
+    setAccounts(nextAccounts);
+    persistWorkspace({ accounts: nextAccounts });
+    saveBackupSnapshot("auto", { accounts: nextAccounts });
+    pushNotification({ title: "Conta atualizada", message: "Os dados da conta foram salvos.", kind: "success" });
+  }, [accounts, persistWorkspace, pushNotification, saveBackupSnapshot]);
+
+  const deleteAccount = useCallback(async (id: string) => {
+    const nextAccounts = accounts.filter(account => account.id !== id);
+
+    setAccounts(nextAccounts);
+    persistWorkspace({ accounts: nextAccounts });
+    saveBackupSnapshot("auto", { accounts: nextAccounts });
+    pushNotification({ title: "Conta removida", message: "A conta saiu do seu mapa financeiro.", kind: "info" });
+  }, [accounts, persistWorkspace, pushNotification, saveBackupSnapshot]);
+
   const changePlan = useCallback(async (plan: User["plan"]) => {
     if (!user) return;
 
@@ -843,7 +1018,7 @@ export function useFinanceApp() {
     setUser(nextUser);
     const savedUser = updateLocalAccountUser(nextUser);
     setUser(savedUser);
-    pushNotification({ title: "Plano atualizado", message: `Seu plano agora é ${plan}.`, kind: "success" });
+    pushNotification({ title: "Plano atualizado", message: `Seu plano agora Ã© ${plan}.`, kind: "success" });
   }, [pushNotification, user]);
 
   const refresh = useCallback(async () => {
@@ -857,8 +1032,10 @@ export function useFinanceApp() {
     user,
     notifications,
     transactions,
+    deletedTransactions,
     monthTransactions,
     categories: categoriesWithSpent,
+    accounts,
     settings,
     monthlyGoals,
     monthlyClosures,
@@ -888,11 +1065,15 @@ export function useFinanceApp() {
     markNotificationsRead,
     clearNotifications,
     addTransaction,
+    addInstallmentTransaction,
     importTransactions,
     updateTransaction,
     duplicateTransaction,
     toggleTransactionStatus,
     deleteTransaction,
+    restoreTransaction,
+    deleteTransactionForever,
+    emptyTrash,
     clearTransactions,
     exportBackup,
     importBackup,
@@ -909,6 +1090,9 @@ export function useFinanceApp() {
     addCategory,
     updateCategory,
     deleteCategory,
+    addAccount,
+    updateAccount,
+    deleteAccount,
     changePlan,
     refresh,
   };

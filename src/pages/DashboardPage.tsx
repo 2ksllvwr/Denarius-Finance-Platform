@@ -31,9 +31,10 @@ interface DashboardPageProps {
   currency: string;
   selectedMonthLabel: string;
   onViewTransactions: () => void;
+  onNewTransaction: () => void;
 }
 
-export function DashboardPage({ stats, transactions, categories, monthly, currency, selectedMonthLabel, onViewTransactions }: DashboardPageProps) {
+export function DashboardPage({ stats, transactions, categories, monthly, currency, selectedMonthLabel, onViewTransactions, onNewTransaction }: DashboardPageProps) {
   const categoryChart = categories
     .filter(category => category.spent > 0)
     .sort((a, b) => b.spent - a.spent)
@@ -94,7 +95,13 @@ export function DashboardPage({ stats, transactions, categories, monthly, curren
                 <span className={cn("text-[13px] font-semibold tabular-nums flex-shrink-0", tx.type === "income" ? "text-success-600" : "text-gray-700")}>{tx.type === "income" ? "+" : "-"} {formatCurrency(tx.amount, currency)}</span>
               </div>
             ))}
-            {transactions.length === 0 && <p className="p-8 text-center text-sm text-gray-400">Nenhuma transação registrada.</p>}
+            {transactions.length === 0 && (
+              <div className="p-8 text-center">
+                <p className="text-sm font-medium text-gray-700">Comece pelo primeiro lançamento</p>
+                <p className="mt-1 text-[12px] text-gray-400">Registre uma receita, despesa ou compra parcelada para ativar o painel.</p>
+                <button onClick={onNewTransaction} className="mt-4 bg-gray-900 text-white px-4 py-2.5 rounded-xl text-[13px] font-semibold hover:bg-gray-800 transition-colors">Nova transação</button>
+              </div>
+            )}
           </div>
         </div>
 
@@ -104,6 +111,12 @@ export function DashboardPage({ stats, transactions, categories, monthly, curren
             <p className="text-[11px] text-gray-400 mt-0.5">Limite por categoria no mês</p>
           </div>
           <div className="p-4 space-y-4">
+            {categories.filter(category => category.budget > 0).length === 0 && (
+              <div className="py-8 text-center">
+                <p className="text-sm font-medium text-gray-700">Sem orçamentos definidos</p>
+                <p className="mt-1 text-[12px] text-gray-400">Defina limites nas categorias para acompanhar seu mês com precisão.</p>
+              </div>
+            )}
             {categories.filter(category => category.budget > 0).slice(0, 6).map(cat => {
               const pct = cat.budget > 0 ? Math.min(Math.round((cat.spent / cat.budget) * 100), 100) : 0;
               return (

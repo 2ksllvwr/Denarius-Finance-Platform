@@ -12,13 +12,19 @@ interface CategoriesPageProps {
   onDelete: (id: string) => Promise<void>;
 }
 
+function parseCurrencyInput(value: string) {
+  const normalized = value.trim().replace(/\./g, "").replace(",", ".");
+  const amount = Number(normalized);
+  return Number.isFinite(amount) ? amount : 0;
+}
+
 export function CategoriesPage({ categories, currency, onAdd, onUpdate, onDelete }: CategoriesPageProps) {
   const [form, setForm] = useState({ name: "", icon: "📌", color: "#6366f1", budget: "" });
   const [editingBudget, setEditingBudget] = useState<Record<string, string>>({});
 
   const add = async () => {
     if (!form.name.trim()) return;
-    await onAdd({ name: form.name.trim(), icon: form.icon.trim() || "📌", color: form.color, budget: Number(form.budget || 0) });
+    await onAdd({ name: form.name.trim(), icon: form.icon.trim() || "📌", color: form.color, budget: parseCurrencyInput(form.budget) });
     setForm({ name: "", icon: "📌", color: "#6366f1", budget: "" });
   };
 
@@ -63,11 +69,17 @@ export function CategoriesPage({ categories, currency, onAdd, onUpdate, onDelete
 
               <div className="mt-4 flex gap-2">
                 <input value={budgetValue} onChange={event => setEditingBudget(prev => ({ ...prev, [category.id]: event.target.value }))} inputMode="decimal" className="flex-1 bg-surface border border-border rounded-xl px-3.5 py-2.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500" />
-                <button onClick={() => void onUpdate(category.id, { budget: Number(budgetValue || 0) })} className="px-4 py-2.5 rounded-xl bg-gray-900 text-white text-[13px] font-semibold hover:bg-gray-800">Salvar</button>
+                <button onClick={() => void onUpdate(category.id, { budget: parseCurrencyInput(budgetValue) })} className="px-4 py-2.5 rounded-xl bg-gray-900 text-white text-[13px] font-semibold hover:bg-gray-800">Salvar</button>
               </div>
             </div>
           );
         })}
+        {categories.length === 0 && (
+          <div className="md:col-span-2 bg-card border border-border rounded-2xl p-10 text-center">
+            <p className="text-sm font-medium text-gray-700">Nenhuma categoria criada</p>
+            <p className="mt-1 text-[12px] text-gray-400">Crie categorias para organizar lançamentos e acompanhar orçamentos mensais.</p>
+          </div>
+        )}
       </div>
     </div>
   );

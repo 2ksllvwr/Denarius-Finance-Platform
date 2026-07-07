@@ -1,5 +1,5 @@
-const CACHE_NAME = "denarius-shell-v1";
-const SHELL_ASSETS = ["/", "/manifest.webmanifest", "/icon.svg"];
+const CACHE_NAME = "denarius-shell-v2";
+const SHELL_ASSETS = ["/", "/manifest.webmanifest", "/icon.svg", "/fonts/webfont.ttf"];
 
 self.addEventListener("install", event => {
   event.waitUntil(
@@ -27,6 +27,12 @@ self.addEventListener("fetch", event => {
         caches.open(CACHE_NAME).then(cache => cache.put(event.request, copy));
         return response;
       })
-      .catch(() => caches.match(event.request).then(cached => cached ?? caches.match("/"))),
+      .catch(() => {
+        if (event.request.mode === "navigate") {
+          return caches.match("/").then(cached => cached ?? Response.error());
+        }
+
+        return caches.match(event.request).then(cached => cached ?? Response.error());
+      }),
   );
 });

@@ -21,10 +21,11 @@ export function BrandMark({ className, letterClassName }: BrandMarkProps) {
 export function BrandName({ className }: { className?: string }) {
   return (
     <span
-      aria-label="DENARIUS"
-      className={cn("font-brand text-[30px] font-normal lowercase leading-none tracking-normal", className)}
+      aria-label="Denarius"
+      className={cn("inline-flex items-baseline leading-none tracking-normal select-none", className)}
     >
-      denarius
+      <span className="font-bold" style={romanDStyle}>D</span>
+      <span className="font-brand font-normal lowercase">enarius</span>
     </span>
   );
 }

@@ -94,7 +94,7 @@ export function downloadCsv(transactions: Transaction[]) {
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = "DENARIUS-transacoes.csv";
+  link.download = "Denarius-transacoes.csv";
   link.click();
   URL.revokeObjectURL(url);
 }
@@ -117,7 +117,7 @@ export function exportPdf(transactions: Transaction[], stats: Stats) {
   win.document.write(`
     <html>
       <head>
-        <title>Relatório DENARIUS</title>
+        <title>Relatório Denarius</title>
         <style>
           body { font-family: Arial, sans-serif; padding: 32px; color: #111; }
           h1 { margin: 0 0 8px; }
@@ -132,7 +132,7 @@ export function exportPdf(transactions: Transaction[], stats: Stats) {
         </style>
       </head>
       <body>
-        <h1>Relatório DENARIUS</h1>
+        <h1>Relatório Denarius</h1>
         <p>Gerado em ${new Date().toLocaleDateString("pt-BR")}</p>
         <div class="cards">
           <div class="card"><div class="label">Saldo</div><div class="value">R$ ${stats.balance.toFixed(2).replace(".", ",")}</div></div>

@@ -1,4 +1,4 @@
-import type { BackupSnapshot, DenariusBackup } from "@/data/types";
+import { INITIAL_ACCOUNTS, type BackupSnapshot, type DenariusBackup } from "@/data/types";
 
 export function createBackupSnapshot(payload: DenariusBackup, reason: BackupSnapshot["reason"]): BackupSnapshot {
   return {
@@ -19,7 +19,7 @@ export function downloadBackupFile(backup: DenariusBackup) {
   const link = document.createElement("a");
 
   link.href = url;
-  link.download = `DENARIUS-backup-${backup.exportedAt.slice(0, 10)}.json`;
+  link.download = `Denarius-backup-${backup.exportedAt.slice(0, 10)}.json`;
   link.click();
   URL.revokeObjectURL(url);
 }
@@ -28,7 +28,7 @@ export function parseBackupFile(text: string): DenariusBackup {
   const parsed = JSON.parse(text) as Partial<DenariusBackup>;
 
   if (
-    parsed.app !== "DENARIUS" ||
+    (parsed.app !== "Denarius" && parsed.app !== "DENARIUS") ||
     parsed.version !== 1 ||
     !parsed.user ||
     !Array.isArray(parsed.transactions) ||
@@ -41,5 +41,5 @@ export function parseBackupFile(text: string): DenariusBackup {
     throw new Error("Arquivo de backup inválido.");
   }
 
-  return parsed as DenariusBackup;
+  return { ...parsed, app: "Denarius", accounts: parsed.accounts ?? INITIAL_ACCOUNTS, deletedTransactions: parsed.deletedTransactions ?? [] } as DenariusBackup;
 }

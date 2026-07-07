@@ -1,13 +1,15 @@
 import { useEffect, useId, useState } from "react";
 import { ProfileAvatar } from "@/components/ProfileAvatar";
 import { IconCheck, IconDownload, IconShield, IconTrash, IconUser } from "@/components/Icons";
-import type { BackupSnapshot, ProfileInput, Settings, User } from "@/data/types";
+import type { BackupSnapshot, ProfileInput, Settings, Transaction, User } from "@/data/types";
+import { formatCurrency, formatDateFull } from "@/data/types";
 import { cn } from "@/utils/cn";
 
 interface SettingsPageProps {
   user: User;
   settings: Settings;
   backupSnapshots: BackupSnapshot[];
+  deletedTransactions: Transaction[];
   onSave: (settings: Settings) => Promise<void>;
   onUpdateProfile: (profile: ProfileInput) => Promise<void>;
   onClear: () => Promise<void>;
@@ -17,6 +19,9 @@ interface SettingsPageProps {
   onImportBackup: (file: File) => Promise<void>;
   onCreateSnapshot: () => Promise<void>;
   onRestoreSnapshot: (id: string) => Promise<void>;
+  onRestoreTransaction: (id: string) => Promise<void>;
+  onDeleteTransactionForever: (id: string) => Promise<void>;
+  onEmptyTrash: () => Promise<void>;
   onSetPin: (pin: string) => Promise<void>;
   onClearPin: () => Promise<void>;
   onLock: () => void;
@@ -31,10 +36,20 @@ const profileFromUser = (user: User): ProfileInput => ({
   bio: user.bio ?? "",
 });
 
+type SettingsTab = "profile" | "preferences" | "security" | "data";
+
+const SETTINGS_TABS: Array<{ id: SettingsTab; label: string }> = [
+  { id: "profile", label: "Perfil" },
+  { id: "preferences", label: "Preferências" },
+  { id: "security", label: "Segurança" },
+  { id: "data", label: "Dados" },
+];
+
 export function SettingsPage({
   user,
   settings,
   backupSnapshots,
+  deletedTransactions,
   onSave,
   onUpdateProfile,
   onClear,
@@ -44,6 +59,9 @@ export function SettingsPage({
   onImportBackup,
   onCreateSnapshot,
   onRestoreSnapshot,
+  onRestoreTransaction,
+  onDeleteTransactionForever,
+  onEmptyTrash,
   onSetPin,
   onClearPin,
   onLock,
@@ -56,6 +74,7 @@ export function SettingsPage({
   const [profileError, setProfileError] = useState<string | null>(null);
   const [pin, setPin] = useState("");
   const [securityMessage, setSecurityMessage] = useState("");
+  const [activeTab, setActiveTab] = useState<SettingsTab>("profile");
 
   useEffect(() => setDraftSettings(settings), [settings]);
   useEffect(() => setDraftProfile(profileFromUser(user)), [user]);
@@ -121,7 +140,22 @@ export function SettingsPage({
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-[860px] mx-auto space-y-5 animate-fade-in">
-      <div className="bg-card border border-border rounded-2xl overflow-hidden">
+      <div className="bg-card border border-border rounded-2xl p-1 flex overflow-x-auto">
+        {SETTINGS_TABS.map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={cn(
+              "flex-1 min-w-fit rounded-xl px-4 py-2.5 text-[13px] font-semibold transition-all",
+              activeTab === tab.id ? "bg-gray-900 text-white shadow-sm" : "text-gray-400 hover:text-gray-700 hover:bg-gray-50",
+            )}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {activeTab === "profile" && <div className="bg-card border border-border rounded-2xl overflow-hidden">
         <div className="px-5 py-4 border-b border-border">
           <h3 className="text-sm font-semibold text-gray-900">Perfil</h3>
           <p className="text-[11px] text-gray-400 mt-0.5">Personalize sua conta e foto</p>
@@ -172,9 +206,9 @@ export function SettingsPage({
             {profileError && <p className="sm:col-span-2 text-xs text-danger-500 bg-danger-50 border border-danger-100 rounded-xl px-3 py-2">{profileError}</p>}
           </div>
         </div>
-      </div>
+      </div>}
 
-      <div className="bg-card border border-border rounded-2xl overflow-hidden">
+      {activeTab === "preferences" && <div className="bg-card border border-border rounded-2xl overflow-hidden">
         <div className="px-5 py-4 border-b border-border">
           <h3 className="text-sm font-semibold text-gray-900">Preferências</h3>
           <p className="text-[11px] text-gray-400 mt-0.5">Configure notificações e moeda</p>
@@ -206,9 +240,9 @@ export function SettingsPage({
             </select>
           </div>
         </div>
-      </div>
+      </div>}
 
-      <div className="bg-card border border-border rounded-2xl overflow-hidden">
+      {activeTab === "security" && <div className="bg-card border border-border rounded-2xl overflow-hidden">
         <div className="px-5 py-4 border-b border-border">
           <h3 className="text-sm font-semibold text-gray-900">Segurança local</h3>
           <p className="text-[11px] text-gray-400 mt-0.5">Proteja a sessão offline com PIN e bloqueio automático</p>
@@ -238,9 +272,9 @@ export function SettingsPage({
             {securityMessage && <span className="self-center text-[12px] text-gray-400">{securityMessage}</span>}
           </div>
         </div>
-      </div>
+      </div>}
 
-      <div className="bg-card border border-border rounded-2xl overflow-hidden">
+      {activeTab === "data" && <div className="bg-card border border-border rounded-2xl overflow-hidden">
         <div className="px-5 py-4 border-b border-border">
           <h3 className="text-sm font-semibold text-gray-900">Dados</h3>
           <p className="text-[11px] text-gray-400 mt-0.5">Exporte, restaure e proteja seus dados offline</p>
@@ -280,8 +314,34 @@ export function SettingsPage({
               ))}
             </div>
           )}
+          <div className="rounded-2xl border border-border overflow-hidden">
+            <div className="px-4 py-3 bg-surface border-b border-border flex items-center justify-between gap-3">
+              <div>
+                <p className="text-[13px] font-semibold text-gray-900">Lixeira de transações</p>
+                <p className="text-[11px] text-gray-400">{deletedTransactions.length} itens removidos</p>
+              </div>
+              <button onClick={() => void onEmptyTrash()} disabled={deletedTransactions.length === 0} className="border border-danger-100 text-danger-500 px-3 py-2 rounded-xl text-[12px] font-semibold hover:bg-danger-50 disabled:opacity-40 disabled:cursor-not-allowed">
+                Esvaziar
+              </button>
+            </div>
+            <div className="divide-y divide-border max-h-[280px] overflow-y-auto">
+              {deletedTransactions.slice(0, 8).map(transaction => (
+                <div key={transaction.id} className="px-4 py-3 flex items-center justify-between gap-3 bg-white">
+                  <div className="min-w-0">
+                    <p className="text-[13px] font-semibold text-gray-800 truncate">{transaction.description}</p>
+                    <p className="text-[11px] text-gray-400">{transaction.category} · {formatDateFull(transaction.date)} · {formatCurrency(transaction.amount, settings.currency)}</p>
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <button onClick={() => void onRestoreTransaction(transaction.id)} className="border border-border px-3 py-2 rounded-xl text-[12px] font-semibold text-gray-600 hover:bg-gray-50">Restaurar</button>
+                    <button onClick={() => void onDeleteTransactionForever(transaction.id)} className="border border-danger-100 px-3 py-2 rounded-xl text-[12px] font-semibold text-danger-500 hover:bg-danger-50">Apagar</button>
+                  </div>
+                </div>
+              ))}
+              {deletedTransactions.length === 0 && <p className="p-6 text-center text-sm text-gray-400 bg-white">Nenhuma transação na lixeira.</p>}
+            </div>
+          </div>
         </div>
-      </div>
+      </div>}
 
       <button onClick={() => void save()} className={cn("w-full py-3 rounded-xl text-[13px] font-semibold transition-all shadow-sm active:scale-[0.98]", saved ? "bg-success-500 text-white" : "bg-gray-900 text-white hover:bg-gray-800")}>
         {saved ? <span className="flex items-center justify-center gap-2"><IconCheck size={16} /> Salvo com sucesso!</span> : "Salvar alterações"}
