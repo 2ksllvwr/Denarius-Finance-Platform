@@ -37,6 +37,21 @@ Denarius Finance Platform é uma aplicação financeira web com experiência de 
 - Zod
 - JWT
 
+## Arquitetura
+
+```text
+Navegador (React/PWA)
+        │ HTTPS / JWT
+        ▼
+API Express ─────────► SMTP
+        │              PIN de verificação
+        ▼
+MongoDB
+usuários + workspace financeiro
+```
+
+O MongoDB é a fonte principal dos dados. O front-end mantém apenas a sessão e um cache de apoio, enquanto cadastro, login, recuperação de senha e sincronização passam pela API.
+
 ## Requisitos
 
 - Node.js 22 ou superior
@@ -59,6 +74,8 @@ VITE_API_URL=http://localhost:3333/api
 PORT=3333
 CLIENT_URL=http://localhost:5173
 MONGODB_URI=mongodb+srv://USUARIO:SENHA@cluster0.xxxxx.mongodb.net/denarius?retryWrites=true&w=majority
+MONGO_ROOT_USERNAME=denarius
+MONGO_ROOT_PASSWORD=troque-por-uma-senha-forte
 JWT_SECRET=troque-essa-chave-por-uma-chave-grande-e-segura
 JWT_EXPIRES_IN=7d
 SMTP_HOST=smtp.seu-provedor.com
@@ -66,7 +83,7 @@ SMTP_PORT=587
 SMTP_SECURE=false
 SMTP_USER=usuario-smtp
 SMTP_PASS=senha-smtp
-EMAIL_FROM=DENARIUS <no-reply@seudominio.com>
+EMAIL_FROM="DENARIUS <no-reply@seudominio.com>"
 ```
 
 Depois rode:
@@ -108,13 +125,16 @@ src/
   data/              tipos, dados iniciais e formatadores
   hooks/             estado principal do app financeiro
   pages/             dashboard, onboarding, mensal, transações, categorias, planos e ajustes
-  utils/             autenticação local, backup, CSV, storage, segurança e cálculos
+  services/          cliente HTTP da API
+  utils/             migração local, backup, CSV, storage, segurança e cálculos
 server/
   config/            ambiente e conexão MongoDB
   middleware/        autenticação JWT
-  models/            models Mongoose
-  routes/            rotas REST
-  utils/             defaults e serializers
+  models/            usuários, workspace e verificações de e-mail
+  routes/            autenticação, workspace e rotas REST especializadas
+  utils/             e-mail, defaults e serializers
+Dockerfile           imagem única para front-end e API
+docker-compose.yml   aplicação e MongoDB persistente
 docs/
   screenshots/       imagens SVG para README/portfólio
   IMPLEMENTACAO-EXTERNA.md
@@ -126,7 +146,16 @@ docs/
 
 - `POST /api/auth/register`
 - `POST /api/auth/login`
+- `POST /api/auth/email-code`
+- `POST /api/auth/verify-email-code`
+- `POST /api/auth/reset-password`
 - `GET /api/auth/me`
+- `PATCH /api/auth/me`
+
+### Workspace
+
+- `GET /api/workspace`
+- `PATCH /api/workspace`
 
 ### Transações
 
@@ -187,23 +216,22 @@ Também são aceitos termos em inglês como `income`, `expense`, `completed` e `
 
 - Use **Backup JSON** em Ajustes para exportar conta, perfil, transações, categorias, metas, fechamentos e recorrências.
 - Use **Restaurar JSON** para recuperar um backup no perfil atual.
-- Use **Criar snapshot** para salvar cópias locais rápidas no navegador.
+- Use **Criar snapshot** para manter pontos recentes de restauração no workspace.
 - Ative **PIN local** para bloquear a sessão por inatividade ou manualmente.
 
 ## Observações importantes
 
-- O app offline depende do `localStorage`; limpar dados do navegador apaga contas e lançamentos locais sem backup.
+- O MongoDB é a fonte principal; limpar os dados do navegador não remove a conta nem o workspace remoto.
+- A instalação PWA oferece o shell da interface, mas operações sincronizadas exigem conexão com a API.
 - O `.env` não deve ser versionado.
-- A API precisa de `MONGODB_URI` e `JWT_SECRET` para iniciar.
+- A API exige MongoDB, JWT e SMTP configurados para iniciar.
 - A geração de PDF usa a janela de impressão do navegador.
 - O checkout de assinatura ainda é placeholder para integração futura.
 
 ## Próximos passos recomendados
 
-- Migrar dados offline para IndexedDB para armazenar bases maiores.
-- Criar sincronização offline-first entre localStorage/IndexedDB e MongoDB.
+- Adicionar fila offline em IndexedDB para sincronizar alterações feitas sem conexão.
 - Adicionar testes de componentes e fluxos com Playwright.
-- Criar instalador desktop com Electron ou Tauri.
 - Conectar gateway de pagamento para planos.
 
 ## Licença
