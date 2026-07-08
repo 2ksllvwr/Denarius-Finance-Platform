@@ -280,16 +280,16 @@ export function SettingsPage({
           <p className="text-[11px] text-gray-400 mt-0.5">Exporte, restaure e proteja seus dados offline</p>
         </div>
         <div className="p-5 space-y-4">
-          <div className="flex flex-wrap gap-2.5">
-            <button onClick={onExportCsv} className="flex items-center gap-2 border border-border px-4 py-2.5 rounded-xl text-[13px] font-medium text-gray-600 hover:bg-gray-50 hover:border-border-hover transition-all"><IconDownload size={15} /> Exportar CSV</button>
-            <button onClick={onExportPdf} className="flex items-center gap-2 border border-border px-4 py-2.5 rounded-xl text-[13px] font-medium text-gray-600 hover:bg-gray-50 hover:border-border-hover transition-all"><IconDownload size={15} /> Exportar PDF</button>
-            <button onClick={() => void onExportBackup()} className="flex items-center gap-2 bg-gray-900 text-white px-4 py-2.5 rounded-xl text-[13px] font-semibold hover:bg-gray-800 transition-all"><IconDownload size={15} /> Backup JSON</button>
-            <label htmlFor={backupInputId} className="cursor-pointer flex items-center gap-2 border border-border px-4 py-2.5 rounded-xl text-[13px] font-medium text-gray-600 hover:bg-gray-50 hover:border-border-hover transition-all">
+          <div className="grid grid-cols-1 sm:flex sm:flex-wrap gap-2.5">
+            <button onClick={onExportCsv} className="flex items-center justify-center gap-2 border border-border px-4 py-2.5 rounded-xl text-[13px] font-medium text-gray-600 hover:bg-gray-50 hover:border-border-hover transition-all"><IconDownload size={15} /> Exportar CSV</button>
+            <button onClick={onExportPdf} className="flex items-center justify-center gap-2 border border-border px-4 py-2.5 rounded-xl text-[13px] font-medium text-gray-600 hover:bg-gray-50 hover:border-border-hover transition-all"><IconDownload size={15} /> Exportar PDF</button>
+            <button onClick={() => void onExportBackup()} className="flex items-center justify-center gap-2 bg-gray-900 text-white px-4 py-2.5 rounded-xl text-[13px] font-semibold hover:bg-gray-800 transition-all"><IconDownload size={15} /> Backup JSON</button>
+            <label htmlFor={backupInputId} className="cursor-pointer flex items-center justify-center gap-2 border border-border px-4 py-2.5 rounded-xl text-[13px] font-medium text-gray-600 hover:bg-gray-50 hover:border-border-hover transition-all">
               <IconDownload size={15} /> Restaurar JSON
             </label>
             <input id={backupInputId} type="file" accept="application/json,.json" className="hidden" onChange={event => void importBackup(event.target.files?.[0])} />
             <button onClick={() => void onCreateSnapshot()} className="border border-border px-4 py-2.5 rounded-xl text-[13px] font-medium text-gray-600 hover:bg-gray-50 transition-all">Criar snapshot</button>
-            <button onClick={() => void onClear()} className="flex items-center gap-2 border border-danger-100 text-danger-500 px-4 py-2.5 rounded-xl text-[13px] font-medium hover:bg-danger-50 transition-all"><IconTrash size={15} /> Limpar dados</button>
+            <button onClick={() => void onClear()} className="flex items-center justify-center gap-2 border border-danger-100 text-danger-500 px-4 py-2.5 rounded-xl text-[13px] font-medium hover:bg-danger-50 transition-all"><IconTrash size={15} /> Limpar dados</button>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="rounded-2xl bg-surface border border-border p-4">
@@ -304,12 +304,12 @@ export function SettingsPage({
           {backupSnapshots.length > 0 && (
             <div className="divide-y divide-border rounded-2xl border border-border overflow-hidden">
               {backupSnapshots.slice(0, 3).map(snapshot => (
-                <div key={snapshot.id} className="flex items-center justify-between gap-3 px-4 py-3 bg-white">
+                <div key={snapshot.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-4 py-3 bg-white">
                   <div className="min-w-0">
                     <p className="text-[13px] font-semibold text-gray-800">{new Date(snapshot.createdAt).toLocaleString("pt-BR")}</p>
                     <p className="text-[11px] text-gray-400">{snapshot.transactionCount} transações · {snapshot.recurringCount} recorrências · {snapshot.reason}</p>
                   </div>
-                  <button onClick={() => void onRestoreSnapshot(snapshot.id)} className="flex-shrink-0 border border-border px-3 py-2 rounded-xl text-[12px] font-semibold text-gray-600 hover:bg-gray-50">Restaurar</button>
+                  <button onClick={() => void onRestoreSnapshot(snapshot.id)} className="w-full sm:w-auto flex-shrink-0 border border-border px-3 py-2 rounded-xl text-[12px] font-semibold text-gray-600 hover:bg-gray-50">Restaurar</button>
                 </div>
               ))}
             </div>
@@ -326,12 +326,12 @@ export function SettingsPage({
             </div>
             <div className="divide-y divide-border max-h-[280px] overflow-y-auto">
               {deletedTransactions.slice(0, 8).map(transaction => (
-                <div key={transaction.id} className="px-4 py-3 flex items-center justify-between gap-3 bg-white">
+                <div key={transaction.id} className="px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-white">
                   <div className="min-w-0">
                     <p className="text-[13px] font-semibold text-gray-800 truncate">{transaction.description}</p>
                     <p className="text-[11px] text-gray-400">{transaction.category} · {formatDateFull(transaction.date)} · {formatCurrency(transaction.amount, settings.currency)}</p>
                   </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
+                  <div className="grid grid-cols-2 sm:flex items-center gap-2 w-full sm:w-auto flex-shrink-0">
                     <button onClick={() => void onRestoreTransaction(transaction.id)} className="border border-border px-3 py-2 rounded-xl text-[12px] font-semibold text-gray-600 hover:bg-gray-50">Restaurar</button>
                     <button onClick={() => void onDeleteTransactionForever(transaction.id)} className="border border-danger-100 px-3 py-2 rounded-xl text-[12px] font-semibold text-danger-500 hover:bg-danger-50">Apagar</button>
                   </div>

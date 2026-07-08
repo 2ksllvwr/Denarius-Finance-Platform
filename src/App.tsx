@@ -57,6 +57,9 @@ export default function App() {
         error={finance.error}
         onLogin={finance.login}
         onRegister={finance.register}
+        onRequestEmailCode={finance.requestEmailCode}
+        onVerifyEmailCode={finance.verifyEmailCode}
+        onResetPassword={finance.resetPassword}
       />
     );
   }

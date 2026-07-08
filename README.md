@@ -1,6 +1,6 @@
 # DENARIUS
 
-Denarius Finance Platform é uma aplicação financeira offline-first com experiência de SaaS: login próprio, dashboard financeiro, organização mensal, metas, recorrências, backup local, PIN de segurança, PWA instalável e API Express/MongoDB preparada para produção.
+Denarius Finance Platform é uma aplicação financeira web com experiência de SaaS: login verificado, dashboard financeiro, organização mensal, metas, recorrências, backup, PIN de segurança, PWA instalável e API Express/MongoDB.
 
 ![Dashboard do DENARIUS](docs/screenshots/dashboard.svg)
 
@@ -8,19 +8,20 @@ Denarius Finance Platform é uma aplicação financeira offline-first com experi
 
 ## Destaques
 
-- Autenticação local com cadastro, login, hash de senha e isolamento por usuário.
+- Autenticação JWT com cadastro verificado por e-mail, recuperação de senha e isolamento por usuário.
 - Onboarding pós-cadastro para moeda, meta de saldo, limite de gastos e prioridade mensal.
 - Dashboard com gráficos Recharts para receitas, despesas e distribuição por categoria.
 - Seção mensal para metas, limite de gastos, fechamento/reabertura do mês e recorrências.
 - Transações com criação, edição, duplicação, remoção, alternância de status e filtros avançados.
 - Importação CSV, exportação CSV, relatório PDF e backup/restauração JSON completo.
-- Snapshots locais recentes para restaurar estados anteriores.
+- Snapshots recentes para restaurar estados anteriores.
 - PIN local, bloqueio manual e bloqueio automático por inatividade.
 - Perfil com foto, cargo, telefone, bio e preferências.
 - Notificações internas em tempo real, com suporte a alertas do navegador.
 - Sidebar responsiva com menu hamburger, animação suave e recolhimento ao clicar fora.
 - PWA básico com manifest, service worker e shell offline.
-- Backend Express com rotas protegidas, models Mongoose e endpoints para mensal/recorrências.
+- Workspace persistido no MongoDB e disponível em diferentes dispositivos.
+- Backend Express com rotas protegidas, validação Zod e limitação de tentativas.
 - Testes unitários para cálculos, CSV e backup.
 
 ## Stack
@@ -40,26 +41,10 @@ Denarius Finance Platform é uma aplicação financeira offline-first com experi
 
 - Node.js 22 ou superior
 - npm
-- MongoDB local ou MongoDB Atlas, apenas se quiser usar a API com banco real
+- MongoDB local, Docker ou MongoDB Atlas
+- Uma conta SMTP para envio dos códigos
 
-## Rodando em modo offline
-
-O modo offline é o caminho mais simples para testar agora. Ele usa `localStorage` do navegador por usuário.
-
-```bash
-npm install
-npm run dev
-```
-
-Abra:
-
-```text
-http://localhost:5173
-```
-
-Crie uma conta na tela inicial e use o app normalmente. Os dados ficam salvos no navegador, separados por origem. Por exemplo, `localhost:5173` e `127.0.0.1:5173` guardam dados diferentes.
-
-## Rodando com API
+## Rodando localmente
 
 Crie o `.env` a partir do exemplo:
 
@@ -76,6 +61,12 @@ CLIENT_URL=http://localhost:5173
 MONGODB_URI=mongodb+srv://USUARIO:SENHA@cluster0.xxxxx.mongodb.net/denarius?retryWrites=true&w=majority
 JWT_SECRET=troque-essa-chave-por-uma-chave-grande-e-segura
 JWT_EXPIRES_IN=7d
+SMTP_HOST=smtp.seu-provedor.com
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USER=usuario-smtp
+SMTP_PASS=senha-smtp
+EMAIL_FROM=DENARIUS <no-reply@seudominio.com>
 ```
 
 Depois rode:
@@ -83,6 +74,18 @@ Depois rode:
 ```bash
 npm run dev:full
 ```
+
+O cadastro e a recuperação de senha usam a API para enviar um PIN por e-mail. Sem as variáveis SMTP, esses fluxos exibem um erro de configuração e não simulam o envio.
+
+## Deploy com Docker
+
+O container serve o front-end e a API no mesmo domínio. Copie o `.env.example`, defina senhas fortes e execute:
+
+```bash
+docker compose up -d --build
+```
+
+Para usar MongoDB Atlas em vez do container local, defina `MONGODB_URI` diretamente na plataforma de hospedagem. As variáveis obrigatórias em produção são `MONGODB_URI`, `JWT_SECRET`, `CLIENT_URL`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` e `EMAIL_FROM`.
 
 ## Scripts
 

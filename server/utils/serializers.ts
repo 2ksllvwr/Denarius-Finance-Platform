@@ -9,6 +9,10 @@ export function serializeUser(user: UserDocument) {
     name: user.name,
     email: user.email,
     plan: user.plan,
+    avatarUrl: user.avatarUrl,
+    title: user.title,
+    phone: user.phone,
+    bio: user.bio,
   };
 }
 

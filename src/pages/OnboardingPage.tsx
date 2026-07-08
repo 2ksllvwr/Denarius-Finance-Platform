@@ -38,7 +38,7 @@ export function OnboardingPage({ user, currency, onComplete, onLogout }: Onboard
 
   return (
     <div className="min-h-screen bg-gray-950 text-white grid lg:grid-cols-[0.9fr_1.1fr]">
-      <section className="p-6 sm:p-10 flex flex-col justify-between bg-[radial-gradient(circle_at_20%_10%,#3b6cf544,transparent_34%),linear-gradient(145deg,#111,#050505)]">
+      <section className="p-6 sm:p-10 flex flex-col justify-between bg-gray-950">
         <div className="flex items-center gap-3">
           <BrandMark className="w-11 h-11 rounded-2xl bg-white/10 border border-white/10 text-white" letterClassName="text-3xl" />
           <div>
@@ -48,14 +48,14 @@ export function OnboardingPage({ user, currency, onComplete, onLogout }: Onboard
         </div>
 
         <div className="py-16 lg:py-0">
-          <p className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-1.5 text-xs text-white/60">
+          <p className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/10 px-3 py-1.5 text-xs text-white/60">
             <IconShield size={14} /> Offline-first
           </p>
           <h1 className="mt-6 max-w-xl text-4xl sm:text-5xl font-semibold leading-tight tracking-tight">
             Ajuste seu mês antes do primeiro lançamento.
           </h1>
           <p className="mt-5 max-w-lg text-sm sm:text-base leading-7 text-white/55">
-            Olá, {user.name}. Em menos de um minuto o Denarius cria suas metas iniciais e deixa seu painel pronto para acompanhamento mensal.
+            Olá, {user.name}. Em menos de um minuto você define metas iniciais e deixa o painel pronto para acompanhamento mensal.
           </p>
         </div>
 
@@ -63,7 +63,7 @@ export function OnboardingPage({ user, currency, onComplete, onLogout }: Onboard
       </section>
 
       <section className="bg-surface text-gray-900 flex items-center justify-center p-5 sm:p-8">
-        <div className="w-full max-w-[560px] bg-card border border-border rounded-3xl p-5 sm:p-7 shadow-sm">
+        <div className="w-full max-w-[560px] bg-card border border-border rounded-2xl p-5 sm:p-7 shadow-sm">
           <div className="w-12 h-12 rounded-2xl bg-gray-900 text-white flex items-center justify-center mb-5">
             <IconWallet size={22} />
           </div>

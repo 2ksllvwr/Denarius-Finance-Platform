@@ -17,23 +17,17 @@ import {
   type TransactionStatus,
   type User,
 } from "@/data/types";
+import { api, type WorkspacePayload } from "@/services/api";
 import { createBackupSnapshot, downloadBackupFile, parseBackupFile } from "@/utils/backup";
 import { applyCategorySpent, calculateMonthlyData, calculateStats, filterTransactionsByMonth, formatMonthLabel, getDateInMonth, getMonthKey, shiftMonth } from "@/utils/finance";
 import { createSalt, hashSecret, verifySecret } from "@/utils/security";
-import {
-  authenticateLocalAccount,
-  createLocalAccount,
-  readActiveLocalUser,
-  updateLocalAccountUser,
-  writeActiveLocalUser,
-} from "@/utils/localAuth";
+import { findLocalUserByEmail } from "@/utils/localAuth";
 import { readLocalStorage, writeLocalStorage } from "@/utils/localStore";
 
 type Mode = "api" | "local";
 type WorkspaceResource = "transactions" | "deletedTransactions" | "categories" | "accounts" | "settings" | "notifications" | "monthlyGoals" | "monthlyClosures" | "recurringTransactions" | "backupSnapshots";
 
 const TOKEN_KEY = "fluxo.token";
-const MODE_KEY = "fluxo.mode";
 
 const workspaceKey = (userId: string, resource: WorkspaceResource) => `fluxo.local.users.${userId}.${resource}`;
 
@@ -116,7 +110,7 @@ function ensureCategoryList(categories: Category[], categoryNames: string[]) {
     .filter(name => name.trim().length > 0 && !existing.has(name))
     .map(name => {
       existing.add(name);
-      return { id: crypto.randomUUID(), name, icon: "ðŸ“Œ", color: "#6366f1", budget: 0, spent: 0 };
+      return { id: crypto.randomUUID(), name, icon: "📌", color: "#6366f1", budget: 0, spent: 0 };
     });
 
   return additions.length > 0 ? [...categories, ...additions] : categories;
@@ -207,12 +201,12 @@ function writeWorkspace(user: User, workspace: Partial<WorkspaceData>) {
 }
 
 export function useFinanceApp() {
-  const activeUser = readActiveLocalUser();
-  const activeWorkspace = readWorkspace(activeUser);
+  const initialToken = readLocalStorage<string | null>(TOKEN_KEY, null);
+  const activeWorkspace = readWorkspace(null);
 
-  const [mode] = useState<Mode>("local");
-  const [token] = useState<string | null>(null);
-  const [user, setUser] = useState<User | null>(activeUser);
+  const [mode] = useState<Mode>("api");
+  const [token, setToken] = useState<string | null>(initialToken);
+  const [user, setUser] = useState<User | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>(activeWorkspace.transactions);
   const [deletedTransactions, setDeletedTransactions] = useState<Transaction[]>(activeWorkspace.deletedTransactions);
   const [categories, setCategories] = useState<Category[]>(activeWorkspace.categories);
@@ -225,16 +219,32 @@ export function useFinanceApp() {
   const [backupSnapshots, setBackupSnapshots] = useState<BackupSnapshot[]>(activeWorkspace.backupSnapshots);
   const [locked, setLocked] = useState(() => Boolean(activeWorkspace.settings.pinHash));
   const [selectedMonth, setSelectedMonth] = useState(() => getMonthKey());
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(Boolean(initialToken));
   const [error, setError] = useState<string | null>(null);
 
   const persistWorkspace = useCallback((workspace: Partial<WorkspaceData>, targetUser = user) => {
     if (!targetUser) return;
     writeWorkspace(targetUser, workspace);
-  }, [user]);
+    if (token) {
+      void api.updateWorkspace(token, workspace as Partial<WorkspacePayload>).catch(err => {
+        setError(err instanceof Error ? err.message : "Não foi possível sincronizar os dados.");
+      });
+    }
+  }, [token, user]);
 
-  const loadWorkspace = useCallback((nextUser: User) => {
-    const nextWorkspace = readWorkspace(nextUser);
+  const applyWorkspace = useCallback((workspace: Partial<WorkspaceData>) => {
+    const nextWorkspace: WorkspaceData = {
+      transactions: workspace.transactions ?? [],
+      deletedTransactions: workspace.deletedTransactions ?? [],
+      categories: workspace.categories?.length ? workspace.categories : createInitialCategories(),
+      accounts: workspace.accounts?.length ? workspace.accounts : createInitialAccounts(),
+      settings: normalizeSettings(workspace.settings ?? DEFAULT_SETTINGS),
+      notifications: workspace.notifications ?? [],
+      monthlyGoals: workspace.monthlyGoals ?? [],
+      monthlyClosures: workspace.monthlyClosures ?? [],
+      recurringTransactions: workspace.recurringTransactions ?? [],
+      backupSnapshots: workspace.backupSnapshots ?? [],
+    };
     setTransactions(nextWorkspace.transactions);
     setDeletedTransactions(nextWorkspace.deletedTransactions);
     setCategories(nextWorkspace.categories);
@@ -247,6 +257,32 @@ export function useFinanceApp() {
     setBackupSnapshots(nextWorkspace.backupSnapshots);
     setLocked(Boolean(nextWorkspace.settings.pinHash));
   }, []);
+
+  const loadWorkspace = useCallback(async (authToken: string) => {
+    const response = await api.getWorkspace(authToken);
+    applyWorkspace(response.workspace);
+  }, [applyWorkspace]);
+
+  useEffect(() => {
+    if (!initialToken) return;
+    let active = true;
+    Promise.all([api.me(initialToken), api.getWorkspace(initialToken)])
+      .then(([profile, workspace]) => {
+        if (!active) return;
+        setUser(profile.user);
+        applyWorkspace(workspace.workspace);
+      })
+      .catch(() => {
+        if (!active) return;
+        localStorage.removeItem(TOKEN_KEY);
+        setToken(null);
+        setUser(null);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => { active = false; };
+  }, [applyWorkspace, initialToken]);
 
   const pushNotification = useCallback((input: Omit<AppNotification, "id" | "createdAt" | "read">) => {
     const targetUser = user;
@@ -261,27 +297,27 @@ export function useFinanceApp() {
 
     setNotifications(prev => {
       const nextNotifications = [notification, ...prev].slice(0, 30);
-      writeWorkspace(targetUser, { notifications: nextNotifications });
+      persistWorkspace({ notifications: nextNotifications }, targetUser);
       return nextNotifications;
     });
 
     if (document.hidden && "Notification" in window && Notification.permission === "granted") {
       new Notification(input.title, { body: input.message });
     }
-  }, [user]);
+  }, [persistWorkspace, user]);
 
   const markNotificationsRead = useCallback(() => {
     setNotifications(prev => {
       const nextNotifications = prev.map(notification => ({ ...notification, read: true }));
-      if (user) writeWorkspace(user, { notifications: nextNotifications });
+      if (user) persistWorkspace({ notifications: nextNotifications }, user);
       return nextNotifications;
     });
-  }, [user]);
+  }, [persistWorkspace, user]);
 
   const clearNotifications = useCallback(() => {
     setNotifications([]);
-    if (user) writeWorkspace(user, { notifications: [] });
-  }, [user]);
+    if (user) persistWorkspace({ notifications: [] }, user);
+  }, [persistWorkspace, user]);
 
   const monthTransactions = useMemo(() => filterTransactionsByMonth(transactions, selectedMonth), [selectedMonth, transactions]);
   const stats = useMemo(() => calculateStats(monthTransactions), [monthTransactions]);
@@ -319,10 +355,10 @@ export function useFinanceApp() {
     const snapshot = createBackupSnapshot(backup, reason);
     setBackupSnapshots(prev => {
       const nextSnapshots = [snapshot, ...prev].slice(0, 5);
-      writeWorkspace(targetUser, { backupSnapshots: nextSnapshots });
+      persistWorkspace({ backupSnapshots: nextSnapshots }, targetUser);
       return nextSnapshots;
     });
-  }, [buildBackup, user]);
+  }, [buildBackup, persistWorkspace, user]);
 
   useEffect(() => {
     if (!user || !settings.pinHash || locked) return;
@@ -347,12 +383,11 @@ export function useFinanceApp() {
     setError(null);
 
     try {
-      const nextUser = await authenticateLocalAccount(email, password);
-      localStorage.removeItem(TOKEN_KEY);
-      writeLocalStorage(MODE_KEY, "local");
-      writeActiveLocalUser(nextUser);
-      setUser(nextUser);
-      loadWorkspace(nextUser);
+      const response = await api.login(email, password);
+      writeLocalStorage(TOKEN_KEY, response.token);
+      setToken(response.token);
+      setUser(response.user);
+      await loadWorkspace(response.token);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Falha ao fazer login.";
       setError(message);
@@ -362,13 +397,15 @@ export function useFinanceApp() {
     }
   }, [loadWorkspace]);
 
-  const register = useCallback(async (name: string, email: string, password: string) => {
+  const register = useCallback(async (name: string, email: string, password: string, verificationToken: string) => {
     setLoading(true);
     setError(null);
 
     try {
-      const nextUser = await createLocalAccount({ name, email, password });
-      const nextWorkspace = {
+      const previousLocalUser = findLocalUserByEmail(email);
+      const response = await api.register(name, email, password, verificationToken);
+      const localWorkspace = previousLocalUser ? readWorkspace(previousLocalUser) : null;
+      const nextWorkspace: WorkspaceData = localWorkspace ?? {
         transactions: [],
         deletedTransactions: [],
         categories: createInitialCategories(),
@@ -377,7 +414,7 @@ export function useFinanceApp() {
         notifications: [{
           id: crypto.randomUUID(),
           title: "Conta criada",
-          message: "Seu perfil offline estÃ¡ pronto para uso.",
+          message: "Seu perfil foi verificado e está pronto para uso.",
           kind: "success" as const,
           createdAt: new Date().toISOString(),
           read: false,
@@ -388,24 +425,58 @@ export function useFinanceApp() {
         backupSnapshots: [],
       };
 
-      localStorage.removeItem(TOKEN_KEY);
-      writeLocalStorage(MODE_KEY, "local");
-      writeActiveLocalUser(nextUser);
-      writeWorkspace(nextUser, nextWorkspace);
-      setUser(nextUser);
-      setTransactions(nextWorkspace.transactions);
-      setDeletedTransactions(nextWorkspace.deletedTransactions);
-      setCategories(nextWorkspace.categories);
-      setAccounts(nextWorkspace.accounts);
-      setSettings(nextWorkspace.settings);
-      setNotifications(nextWorkspace.notifications);
-      setMonthlyGoals(nextWorkspace.monthlyGoals);
-      setMonthlyClosures(nextWorkspace.monthlyClosures);
-      setRecurringTransactions(nextWorkspace.recurringTransactions);
-      setBackupSnapshots(nextWorkspace.backupSnapshots);
+      writeLocalStorage(TOKEN_KEY, response.token);
+      setToken(response.token);
+      setUser(response.user);
+      await api.updateWorkspace(response.token, nextWorkspace);
+      writeWorkspace(response.user, nextWorkspace);
+      applyWorkspace(nextWorkspace);
       setLocked(false);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Falha ao criar conta.";
+      setError(message);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, [applyWorkspace]);
+
+  const requestEmailCode = useCallback(async (email: string, purpose: "register" | "reset") => {
+    setLoading(true);
+    setError(null);
+    try {
+      await api.requestEmailCode(email, purpose);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Não foi possível enviar o código.";
+      setError(message);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const verifyEmailCode = useCallback(async (email: string, code: string, purpose: "register" | "reset") => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await api.verifyEmailCode(email, code, purpose);
+      return response.verificationToken;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Não foi possível validar o código.";
+      setError(message);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const resetPassword = useCallback(async (email: string, password: string, verificationToken: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      await api.resetPassword(email, password, verificationToken);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Não foi possível redefinir a senha.";
       setError(message);
       throw err;
     } finally {
@@ -419,8 +490,7 @@ export function useFinanceApp() {
     }
 
     localStorage.removeItem(TOKEN_KEY);
-    writeLocalStorage(MODE_KEY, "local");
-    writeActiveLocalUser(null);
+    setToken(null);
     setUser(null);
   }, [accounts, backupSnapshots, categories, deletedTransactions, monthlyClosures, monthlyGoals, notifications, persistWorkspace, recurringTransactions, settings, transactions, user]);
 
@@ -433,7 +503,7 @@ export function useFinanceApp() {
     const categoryExists = categories.some(category => category.name === input.category);
     const nextCategories = categoryExists
       ? categories
-      : [...categories, { id: crypto.randomUUID(), name: input.category, icon: "ðŸ“Œ", color: "#6366f1", budget: 0, spent: 0 }];
+      : [...categories, { id: crypto.randomUUID(), name: input.category, icon: "📌", color: "#6366f1", budget: 0, spent: 0 }];
     const nextCategoriesWithSpent = applyCategorySpent(nextCategories, nextTransactions);
 
     setTransactions(nextTransactions);
@@ -455,8 +525,8 @@ export function useFinanceApp() {
 
           if (previousPct < 80 && nextPct >= 80) {
             pushNotification({
-              title: nextPct >= 100 ? "OrÃ§amento estourado" : "OrÃ§amento em atenÃ§Ã£o",
-              message: `${category.name} chegou a ${Math.round(nextPct)}% do orÃ§amento.`,
+              title: nextPct >= 100 ? "Orçamento estourado" : "Orçamento em atenção",
+              message: `${category.name} chegou a ${Math.round(nextPct)}% do orçamento.`,
               kind: "warning",
             });
           }
@@ -513,7 +583,7 @@ export function useFinanceApp() {
     ));
 
     if (validInputs.length === 0) {
-      pushNotification({ title: "ImportaÃ§Ã£o vazia", message: "Nenhuma linha vÃ¡lida foi encontrada no arquivo.", kind: "warning" });
+      pushNotification({ title: "Importação vazia", message: "Nenhuma linha válida foi encontrada no arquivo.", kind: "warning" });
       return;
     }
 
@@ -537,8 +607,8 @@ export function useFinanceApp() {
     setCategories(nextCategories);
     persistWorkspace({ transactions: nextTransactions, categories: nextCategories });
     pushNotification({
-      title: "ImportaÃ§Ã£o concluÃ­da",
-      message: `${importedTransactions.length} transaÃ§Ãµes foram adicionadas ao Denarius.`,
+      title: "Importação concluída",
+      message: `${importedTransactions.length} transações foram adicionadas ao Denarius.`,
       kind: "success",
     });
   }, [accounts, categories, persistWorkspace, pushNotification, transactions]);
@@ -595,7 +665,7 @@ export function useFinanceApp() {
     setCategories(nextCategories);
     persistWorkspace({ transactions: nextTransactions, categories: nextCategories });
     saveBackupSnapshot("auto", { transactions: nextTransactions, categories: nextCategories });
-    pushNotification({ title: "TransaÃ§Ã£o atualizada", message: `${input.description} foi salvo.`, kind: "success" });
+    pushNotification({ title: "Transação atualizada", message: `${input.description} foi salvo.`, kind: "success" });
   }, [categories, persistWorkspace, pushNotification, saveBackupSnapshot, transactions]);
 
   const duplicateTransaction = useCallback(async (id: string) => {
@@ -605,7 +675,7 @@ export function useFinanceApp() {
     const duplicated: Transaction = {
       ...transaction,
       id: crypto.randomUUID(),
-      description: `${transaction.description} (cÃ³pia)`,
+      description: `${transaction.description} (cópia)`,
       recurringId: undefined,
       recurringMonth: undefined,
     };
@@ -616,7 +686,7 @@ export function useFinanceApp() {
     setCategories(nextCategories);
     persistWorkspace({ transactions: nextTransactions, categories: nextCategories });
     saveBackupSnapshot("auto", { transactions: nextTransactions, categories: nextCategories });
-    pushNotification({ title: "TransaÃ§Ã£o duplicada", message: `${transaction.description} foi copiada.`, kind: "success" });
+    pushNotification({ title: "Transação duplicada", message: `${transaction.description} foi copiada.`, kind: "success" });
   }, [categories, persistWorkspace, pushNotification, saveBackupSnapshot, transactions]);
 
   const toggleTransactionStatus = useCallback(async (id: string) => {
@@ -659,16 +729,16 @@ export function useFinanceApp() {
     if (!user) return;
 
     const backup = parseBackupFile(await file.text());
-    const importedUser = updateLocalAccountUser({
-      ...user,
+    if (!token) return;
+    const profileResponse = await api.updateProfile(token, {
       name: backup.user.name,
-      email: backup.user.email,
+      email: user.email,
       avatarUrl: backup.user.avatarUrl,
       title: backup.user.title,
       phone: backup.user.phone,
       bio: backup.user.bio,
-      plan: backup.user.plan,
     });
+    const importedUser = profileResponse.user;
     const nextSettings = normalizeSettings({
       ...backup.settings,
       lastBackupAt: new Date().toISOString(),
@@ -686,7 +756,7 @@ export function useFinanceApp() {
     setMonthlyGoals(backup.monthlyGoals);
     setMonthlyClosures(backup.monthlyClosures);
     setRecurringTransactions(backup.recurringTransactions);
-    writeWorkspace(importedUser, {
+    persistWorkspace({
       transactions: backup.transactions,
       deletedTransactions: nextDeletedTransactions,
       categories: nextCategories,
@@ -695,7 +765,7 @@ export function useFinanceApp() {
       monthlyGoals: backup.monthlyGoals,
       monthlyClosures: backup.monthlyClosures,
       recurringTransactions: backup.recurringTransactions,
-    });
+    }, importedUser);
     saveBackupSnapshot("import", {
       transactions: backup.transactions,
       deletedTransactions: nextDeletedTransactions,
@@ -707,7 +777,7 @@ export function useFinanceApp() {
       recurringTransactions: backup.recurringTransactions,
     }, importedUser);
     pushNotification({ title: "Backup restaurado", message: "Seus dados foram restaurados neste perfil.", kind: "success" });
-  }, [pushNotification, saveBackupSnapshot, user]);
+  }, [persistWorkspace, pushNotification, saveBackupSnapshot, token, user]);
 
   const createManualSnapshot = useCallback(async () => {
     const lastAutoBackupAt = new Date().toISOString();
@@ -716,7 +786,7 @@ export function useFinanceApp() {
     setSettings(nextSettings);
     persistWorkspace({ settings: nextSettings });
     saveBackupSnapshot("manual", { settings: nextSettings });
-    pushNotification({ title: "Snapshot criado", message: "Uma cÃ³pia local foi salva neste navegador.", kind: "success" });
+    pushNotification({ title: "Snapshot criado", message: "Uma cópia local foi salva neste navegador.", kind: "success" });
   }, [persistWorkspace, pushNotification, saveBackupSnapshot, settings]);
 
   const restoreSnapshot = useCallback(async (id: string) => {
@@ -740,7 +810,7 @@ export function useFinanceApp() {
     setMonthlyGoals(backup.monthlyGoals);
     setMonthlyClosures(backup.monthlyClosures);
     setRecurringTransactions(backup.recurringTransactions);
-    writeWorkspace(user, {
+    persistWorkspace({
       transactions: backup.transactions,
       deletedTransactions: nextDeletedTransactions,
       categories: nextCategories,
@@ -749,13 +819,13 @@ export function useFinanceApp() {
       monthlyGoals: backup.monthlyGoals,
       monthlyClosures: backup.monthlyClosures,
       recurringTransactions: backup.recurringTransactions,
-    });
-    pushNotification({ title: "Snapshot restaurado", message: "Os dados locais voltaram para a versÃ£o escolhida.", kind: "success" });
-  }, [backupSnapshots, pushNotification, user]);
+    }, user);
+    pushNotification({ title: "Snapshot restaurado", message: "Os dados locais voltaram para a versão escolhida.", kind: "success" });
+  }, [backupSnapshots, persistWorkspace, pushNotification, user]);
 
   const setSecurityPin = useCallback(async (pin: string) => {
     if (!/^\d{4,8}$/.test(pin)) {
-      throw new Error("O PIN precisa ter entre 4 e 8 nÃºmeros.");
+      throw new Error("O PIN precisa ter entre 4 e 8 números.");
     }
 
     const pinSalt = createSalt();
@@ -765,7 +835,7 @@ export function useFinanceApp() {
     setSettings(nextSettings);
     setLocked(false);
     persistWorkspace({ settings: nextSettings });
-    pushNotification({ title: "PIN ativado", message: "O bloqueio local jÃ¡ estÃ¡ protegendo sua sessÃ£o.", kind: "success" });
+    pushNotification({ title: "PIN ativado", message: "O bloqueio local já está protegendo sua sessão.", kind: "success" });
   }, [persistWorkspace, pushNotification, settings]);
 
   const clearSecurityPin = useCallback(async () => {
@@ -813,7 +883,7 @@ export function useFinanceApp() {
     setMonthlyGoals(nextGoals);
     persistWorkspace({ settings: nextSettings, monthlyGoals: nextGoals });
     saveBackupSnapshot("auto", { settings: nextSettings, monthlyGoals: nextGoals });
-    pushNotification({ title: "Primeira configuraÃ§Ã£o concluÃ­da", message: "Seu Denarius jÃ¡ estÃ¡ ajustado para o mÃªs.", kind: "success" });
+    pushNotification({ title: "Primeira configuração concluída", message: "Seu Denarius já está ajustado para o mês.", kind: "success" });
   }, [monthlyGoals, persistWorkspace, pushNotification, saveBackupSnapshot, selectedMonth, settings]);
 
   const saveMonthlyGoal = useCallback(async (input: MonthlyGoalInput) => {
@@ -850,7 +920,7 @@ export function useFinanceApp() {
 
     setMonthlyClosures(nextClosures);
     persistWorkspace({ monthlyClosures: nextClosures });
-    pushNotification({ title: "MÃªs fechado", message: `${selectedMonthLabel} foi salvo como fechamento mensal.`, kind: "success" });
+    pushNotification({ title: "Mês fechado", message: `${selectedMonthLabel} foi salvo como fechamento mensal.`, kind: "success" });
   }, [monthlyClosures, persistWorkspace, pushNotification, selectedMonth, selectedMonthLabel, stats.balance, stats.count, stats.expense, stats.income, stats.pending]);
 
   const reopenSelectedMonth = useCallback(async () => {
@@ -858,7 +928,7 @@ export function useFinanceApp() {
 
     setMonthlyClosures(nextClosures);
     persistWorkspace({ monthlyClosures: nextClosures });
-    pushNotification({ title: "MÃªs reaberto", message: `${selectedMonthLabel} voltou para ediÃ§Ã£o normal.`, kind: "info" });
+    pushNotification({ title: "Mês reaberto", message: `${selectedMonthLabel} voltou para edição normal.`, kind: "info" });
   }, [monthlyClosures, persistWorkspace, pushNotification, selectedMonth, selectedMonthLabel]);
 
   const addRecurringTransaction = useCallback(async (input: RecurringTransactionInput) => {
@@ -878,7 +948,7 @@ export function useFinanceApp() {
     setRecurringTransactions(nextRecurring);
     setCategories(nextCategories);
     persistWorkspace({ recurringTransactions: nextRecurring, categories: nextCategories });
-    pushNotification({ title: "RecorrÃªncia criada", message: `${recurring.description} jÃ¡ pode ser gerada mensalmente.`, kind: "success" });
+    pushNotification({ title: "Recorrência criada", message: `${recurring.description} já pode ser gerada mensalmente.`, kind: "success" });
   }, [categories, persistWorkspace, pushNotification, recurringTransactions]);
 
   const toggleRecurringTransaction = useCallback(async (id: string) => {
@@ -893,7 +963,7 @@ export function useFinanceApp() {
 
     setRecurringTransactions(nextRecurring);
     persistWorkspace({ recurringTransactions: nextRecurring });
-    pushNotification({ title: "RecorrÃªncia removida", message: "A regra mensal saiu da sua lista.", kind: "info" });
+    pushNotification({ title: "Recorrência removida", message: "A regra mensal saiu da sua lista.", kind: "info" });
   }, [persistWorkspace, pushNotification, recurringTransactions]);
 
   const generateRecurringForSelectedMonth = useCallback(async () => {
@@ -903,7 +973,7 @@ export function useFinanceApp() {
     ));
 
     if (activeRecurring.length === 0) {
-      pushNotification({ title: "Nada para gerar", message: "Todas as recorrÃªncias ativas jÃ¡ existem neste mÃªs.", kind: "info" });
+      pushNotification({ title: "Nada para gerar", message: "Todas as recorrências ativas já existem neste mês.", kind: "info" });
       return;
     }
 
@@ -928,8 +998,8 @@ export function useFinanceApp() {
     setCategories(nextCategories);
     persistWorkspace({ transactions: nextTransactions, recurringTransactions: nextRecurring, categories: nextCategories });
     pushNotification({
-      title: "RecorrÃªncias geradas",
-      message: `${generatedTransactions.length} lanÃ§amentos foram criados em ${selectedMonthLabel}.`,
+      title: "Recorrências geradas",
+      message: `${generatedTransactions.length} lançamentos foram criados em ${selectedMonthLabel}.`,
       kind: "success",
     });
   }, [categories, persistWorkspace, pushNotification, recurringTransactions, selectedMonth, selectedMonthLabel, transactions]);
@@ -940,14 +1010,12 @@ export function useFinanceApp() {
     setSettings(normalizedSettings);
     persistWorkspace({ settings: normalizedSettings });
     saveBackupSnapshot("auto", { settings: normalizedSettings });
-    pushNotification({ title: "PreferÃªncias salvas", message: "Suas configuraÃ§Ãµes foram atualizadas.", kind: "success" });
+    pushNotification({ title: "Preferências salvas", message: "Suas configurações foram atualizadas.", kind: "success" });
   }, [persistWorkspace, pushNotification, saveBackupSnapshot]);
 
   const updateProfile = useCallback(async (profile: ProfileInput) => {
-    if (!user) return;
-
-    const nextUser = updateLocalAccountUser({
-      ...user,
+    if (!user || !token) return;
+    const response = await api.updateProfile(token, {
       name: profile.name,
       email: profile.email,
       avatarUrl: profile.avatarUrl,
@@ -955,17 +1023,16 @@ export function useFinanceApp() {
       phone: profile.phone,
       bio: profile.bio,
     });
-
-    setUser(nextUser);
+    setUser(response.user);
     pushNotification({ title: "Perfil atualizado", message: "Sua foto e dados pessoais foram salvos.", kind: "success" });
-  }, [pushNotification, user]);
+  }, [pushNotification, token, user]);
 
   const addCategory = useCallback(async (category: Omit<Category, "id" | "spent">) => {
     const nextCategories = [...categories, { id: crypto.randomUUID(), spent: 0, ...category }];
 
     setCategories(nextCategories);
     persistWorkspace({ categories: nextCategories });
-    pushNotification({ title: "Categoria criada", message: `${category.name} jÃ¡ estÃ¡ disponÃ­vel para lanÃ§amentos.`, kind: "success" });
+    pushNotification({ title: "Categoria criada", message: `${category.name} já está disponível para lançamentos.`, kind: "success" });
   }, [categories, persistWorkspace, pushNotification]);
 
   const updateCategory = useCallback(async (id: string, category: Partial<Omit<Category, "id" | "spent">>) => {
@@ -973,7 +1040,7 @@ export function useFinanceApp() {
 
     setCategories(nextCategories);
     persistWorkspace({ categories: nextCategories });
-    pushNotification({ title: "Categoria atualizada", message: "As mudanÃ§as jÃ¡ foram salvas.", kind: "success" });
+    pushNotification({ title: "Categoria atualizada", message: "As mudanças já foram salvas.", kind: "success" });
   }, [categories, persistWorkspace, pushNotification]);
 
   const deleteCategory = useCallback(async (id: string) => {
@@ -1012,19 +1079,16 @@ export function useFinanceApp() {
   }, [accounts, persistWorkspace, pushNotification, saveBackupSnapshot]);
 
   const changePlan = useCallback(async (plan: User["plan"]) => {
-    if (!user) return;
-
-    const nextUser = { ...user, plan };
-    setUser(nextUser);
-    const savedUser = updateLocalAccountUser(nextUser);
-    setUser(savedUser);
-    pushNotification({ title: "Plano atualizado", message: `Seu plano agora Ã© ${plan}.`, kind: "success" });
-  }, [pushNotification, user]);
+    if (!user || !token) return;
+    const response = await api.updatePlan(token, plan);
+    setUser(response.user);
+    pushNotification({ title: "Plano atualizado", message: `Seu plano agora é ${plan}.`, kind: "success" });
+  }, [pushNotification, token, user]);
 
   const refresh = useCallback(async () => {
-    if (!user) return;
-    loadWorkspace(user);
-  }, [loadWorkspace, user]);
+    if (!token) return;
+    await loadWorkspace(token);
+  }, [loadWorkspace, token]);
 
   return {
     mode,
@@ -1055,6 +1119,9 @@ export function useFinanceApp() {
     locked,
     login,
     register,
+    requestEmailCode,
+    verifyEmailCode,
+    resetPassword,
     logout,
     lockApp,
     unlockWithPin,

@@ -182,11 +182,11 @@ export function AccountsPage({ accounts, transactions, currency, onAdd, onUpdate
             <div className="mt-5 grid grid-cols-2 gap-3">
               <div className="rounded-xl bg-surface border border-border p-3">
                 <p className="text-[10px] font-semibold text-gray-400 uppercase">{account.type === "credit" ? "Uso atual" : "Saldo"}</p>
-                <p className="mt-1 text-sm font-bold text-gray-900 tabular-nums">{formatCurrency(projectedBalance, currency)}</p>
+                <p className="mt-1 text-xs sm:text-sm font-bold text-gray-900 tabular-nums break-words">{formatCurrency(projectedBalance, currency)}</p>
               </div>
               <div className="rounded-xl bg-surface border border-border p-3">
                 <p className="text-[10px] font-semibold text-gray-400 uppercase">{account.type === "credit" ? "Limite" : "Lancamentos"}</p>
-                <p className="mt-1 text-sm font-bold text-gray-900 tabular-nums">{account.type === "credit" ? formatCurrency(account.creditLimit ?? 0, currency) : linkedTransactions.length}</p>
+                <p className="mt-1 text-xs sm:text-sm font-bold text-gray-900 tabular-nums break-words">{account.type === "credit" ? formatCurrency(account.creditLimit ?? 0, currency) : linkedTransactions.length}</p>
               </div>
             </div>
             {account.type === "credit" && (

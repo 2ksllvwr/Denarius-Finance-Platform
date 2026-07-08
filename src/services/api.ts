@@ -1,6 +1,19 @@
-import type { Category, MonthlyClosure, MonthlyGoal, MonthlyPoint, RecurringTransaction, Settings, Stats, Transaction, User } from "@/data/types";
+import type { Account, AppNotification, BackupSnapshot, Category, MonthlyClosure, MonthlyGoal, MonthlyPoint, RecurringTransaction, Settings, Stats, Transaction, User } from "@/data/types";
 
 const API_URL = import.meta.env.VITE_API_URL ?? "/api";
+
+export interface WorkspacePayload {
+  transactions: Transaction[];
+  deletedTransactions: Transaction[];
+  categories: Category[];
+  accounts: Account[];
+  settings: Settings;
+  notifications: AppNotification[];
+  monthlyGoals: MonthlyGoal[];
+  monthlyClosures: MonthlyClosure[];
+  recurringTransactions: RecurringTransaction[];
+  backupSnapshots: BackupSnapshot[];
+}
 
 export class ApiError extends Error {
   status: number;
@@ -43,13 +56,46 @@ export const api = {
       body: JSON.stringify({ email, password }),
     }),
 
-  register: (name: string, email: string, password: string) =>
+  register: (name: string, email: string, password: string, verificationToken: string) =>
     request<{ token: string; user: User }>("/auth/register", {
       method: "POST",
-      body: JSON.stringify({ name, email, password }),
+      body: JSON.stringify({ name, email, password, verificationToken }),
+    }),
+
+  requestEmailCode: (email: string, purpose: "register" | "reset") =>
+    request<{ message: string }>("/auth/email-code", {
+      method: "POST",
+      body: JSON.stringify({ email, purpose }),
+    }),
+
+  verifyEmailCode: (email: string, code: string, purpose: "register" | "reset") =>
+    request<{ verificationToken: string }>("/auth/verify-email-code", {
+      method: "POST",
+      body: JSON.stringify({ email, code, purpose }),
+    }),
+
+  resetPassword: (email: string, password: string, verificationToken: string) =>
+    request<{ message: string }>("/auth/reset-password", {
+      method: "POST",
+      body: JSON.stringify({ email, password, verificationToken }),
     }),
 
   me: (token: string) => request<{ user: User }>("/auth/me", {}, token),
+
+  updateProfile: (token: string, user: Omit<User, "id" | "plan">) =>
+    request<{ user: User }>("/auth/me", {
+      method: "PATCH",
+      body: JSON.stringify(user),
+    }, token),
+
+  getWorkspace: (token: string) =>
+    request<{ workspace: WorkspacePayload }>("/workspace", {}, token),
+
+  updateWorkspace: (token: string, workspace: Partial<WorkspacePayload>) =>
+    request<{ workspace: WorkspacePayload }>("/workspace", {
+      method: "PATCH",
+      body: JSON.stringify(workspace),
+    }, token),
 
   getTransactions: (token: string) => request<{ transactions: Transaction[] }>("/transactions", {}, token),
 

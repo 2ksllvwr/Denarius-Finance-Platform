@@ -120,9 +120,9 @@ export function TransactionsPage({ transactions, accounts, categories, currency,
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-3">
           <div className="relative">
             <IconSearch size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-300" />
-            <input value={search} onChange={event => setSearch(event.target.value)} placeholder="Buscar por descriÃ§Ã£o ou categoria..." className="w-full bg-surface border border-border rounded-xl pl-9 pr-3 py-2.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all" />
+            <input value={search} onChange={event => setSearch(event.target.value)} placeholder="Buscar por descrição ou categoria..." className="w-full bg-surface border border-border rounded-xl pl-9 pr-3 py-2.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all" />
           </div>
-          <div className="flex bg-surface border border-border p-1 rounded-xl">
+          <div className="grid grid-cols-3 bg-surface border border-border p-1 rounded-xl">
             {[
               { id: "all", label: "Todas" },
               { id: "income", label: "Receitas" },
@@ -136,24 +136,24 @@ export function TransactionsPage({ transactions, accounts, categories, currency,
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 mt-3">
           <select value={statusFilter} onChange={event => setStatusFilter(event.target.value as StatusFilter)} className="bg-surface border border-border rounded-xl px-3 py-2.5 text-[13px] text-gray-600 focus:outline-none focus:ring-2 focus:ring-brand-500/20">
             <option value="all">Todos os status</option>
-            <option value="completed">ConcluÃ­das</option>
+            <option value="completed">Concluídas</option>
             <option value="pending">Pendentes</option>
           </select>
           <select value={categoryFilter} onChange={event => setCategoryFilter(event.target.value)} className="bg-surface border border-border rounded-xl px-3 py-2.5 text-[13px] text-gray-600 focus:outline-none focus:ring-2 focus:ring-brand-500/20">
             <option value="all">Todas as categorias</option>
             {categories.map(category => <option key={category.id} value={category.name}>{category.name}</option>)}
           </select>
-          <input inputMode="decimal" value={minAmount} onChange={event => setMinAmount(event.target.value)} placeholder="Valor mÃ­nimo" className="bg-surface border border-border rounded-xl px-3 py-2.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-brand-500/20" />
-          <input inputMode="decimal" value={maxAmount} onChange={event => setMaxAmount(event.target.value)} placeholder="Valor mÃ¡ximo" className="bg-surface border border-border rounded-xl px-3 py-2.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-brand-500/20" />
+          <input inputMode="decimal" value={minAmount} onChange={event => setMinAmount(event.target.value)} placeholder="Valor mínimo" className="bg-surface border border-border rounded-xl px-3 py-2.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-brand-500/20" />
+          <input inputMode="decimal" value={maxAmount} onChange={event => setMaxAmount(event.target.value)} placeholder="Valor máximo" className="bg-surface border border-border rounded-xl px-3 py-2.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-brand-500/20" />
           <button onClick={resetFilters} disabled={!hasFilters} className="border border-border rounded-xl px-3 py-2.5 text-[13px] font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all">Limpar filtros</button>
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-2">
-        <button onClick={() => downloadCsv(filtered)} className="flex items-center gap-2 border border-border px-4 py-2.5 rounded-xl text-[13px] font-medium text-gray-600 hover:bg-gray-50 hover:border-border-hover transition-all bg-card"><IconDownload size={15} /> Exportar CSV</button>
-        <button onClick={() => exportPdf(filtered, filteredStats)} className="flex items-center gap-2 border border-border px-4 py-2.5 rounded-xl text-[13px] font-medium text-gray-600 hover:bg-gray-50 hover:border-border-hover transition-all bg-card"><IconDownload size={15} /> Exportar PDF</button>
+      <div className="grid grid-cols-1 sm:flex sm:flex-wrap gap-2">
+        <button onClick={() => downloadCsv(filtered)} className="flex items-center justify-center gap-2 border border-border px-4 py-2.5 rounded-xl text-[13px] font-medium text-gray-600 hover:bg-gray-50 hover:border-border-hover transition-all bg-card"><IconDownload size={15} /> Exportar CSV</button>
+        <button onClick={() => exportPdf(filtered, filteredStats)} className="flex items-center justify-center gap-2 border border-border px-4 py-2.5 rounded-xl text-[13px] font-medium text-gray-600 hover:bg-gray-50 hover:border-border-hover transition-all bg-card"><IconDownload size={15} /> Exportar PDF</button>
         <input ref={fileInputRef} type="file" accept=".csv,text/csv" className="hidden" onChange={event => void importCsv(event)} />
-        <button onClick={() => fileInputRef.current?.click()} disabled={importing} className="flex items-center gap-2 bg-gray-900 text-white px-4 py-2.5 rounded-xl text-[13px] font-semibold hover:bg-gray-800 disabled:opacity-50 transition-all"><IconDownload size={15} /> {importing ? "Importando..." : "Importar CSV"}</button>
+        <button onClick={() => fileInputRef.current?.click()} disabled={importing} className="flex items-center justify-center gap-2 bg-gray-900 text-white px-4 py-2.5 rounded-xl text-[13px] font-semibold hover:bg-gray-800 disabled:opacity-50 transition-all"><IconDownload size={15} /> {importing ? "Importando..." : "Importar CSV"}</button>
         {importMessage && <span className="self-center text-[12px] text-gray-400">{importMessage}</span>}
       </div>
 
@@ -185,7 +185,7 @@ export function TransactionsPage({ transactions, accounts, categories, currency,
 
       <div className="bg-card border border-border rounded-2xl overflow-hidden">
         <div className="hidden sm:grid grid-cols-[1fr_120px_120px_120px_144px] gap-4 px-5 py-3 border-b border-border bg-surface text-[11px] font-medium text-gray-400 uppercase">
-          <span>DescriÃ§Ã£o</span><span>Categoria</span><span>Data</span><span className="text-right">Valor</span><span />
+          <span>Descrição</span><span>Categoria</span><span>Data</span><span className="text-right">Valor</span><span />
         </div>
         <div className="divide-y divide-border">
           {grouped.map(group => (
@@ -204,11 +204,11 @@ export function TransactionsPage({ transactions, accounts, categories, currency,
                   <span className="hidden sm:block text-[12px] text-gray-500 truncate">{transaction.accountId ? accountNameById.get(transaction.accountId) ?? transaction.category : transaction.category}</span>
                   <span className="hidden sm:block text-[12px] text-gray-400">{formatDateFull(transaction.date)}</span>
                   <span className={cn("text-[13px] font-semibold tabular-nums text-right", transaction.type === "income" ? "text-success-600" : "text-gray-700")}>{transaction.type === "income" ? "+" : "-"} {formatCurrency(transaction.amount, currency)}</span>
-                  <div className="flex items-center justify-end gap-1">
+                  <div className="col-span-2 sm:col-span-1 flex items-center justify-end gap-1 border-t border-border pt-2 sm:border-0 sm:pt-0">
                     <button onClick={() => void onToggleStatus(transaction.id)} className="flex w-8 h-8 items-center justify-center rounded-lg text-gray-300 hover:text-success-600 hover:bg-success-50 transition-all" aria-label="Alternar status"><IconCheck size={15} /></button>
-                    <button onClick={() => onEdit(transaction)} className="flex w-8 h-8 items-center justify-center rounded-lg text-gray-300 hover:text-brand-600 hover:bg-brand-50 transition-all" aria-label="Editar transaÃ§Ã£o"><IconEdit size={15} /></button>
-                    <button onClick={() => void onDuplicate(transaction.id)} className="flex w-8 h-8 items-center justify-center rounded-lg text-gray-300 hover:text-gray-700 hover:bg-gray-100 transition-all" aria-label="Duplicar transaÃ§Ã£o"><IconCopy size={15} /></button>
-                    <button onClick={() => void remove(transaction.id)} className="flex w-8 h-8 items-center justify-center rounded-lg text-gray-300 hover:text-danger-500 hover:bg-danger-50 transition-all" aria-label="Remover transaÃ§Ã£o"><IconTrash size={15} /></button>
+                    <button onClick={() => onEdit(transaction)} className="flex w-8 h-8 items-center justify-center rounded-lg text-gray-300 hover:text-brand-600 hover:bg-brand-50 transition-all" aria-label="Editar transação"><IconEdit size={15} /></button>
+                    <button onClick={() => void onDuplicate(transaction.id)} className="flex w-8 h-8 items-center justify-center rounded-lg text-gray-300 hover:text-gray-700 hover:bg-gray-100 transition-all" aria-label="Duplicar transação"><IconCopy size={15} /></button>
+                    <button onClick={() => void remove(transaction.id)} className="flex w-8 h-8 items-center justify-center rounded-lg text-gray-300 hover:text-danger-500 hover:bg-danger-50 transition-all" aria-label="Remover transação"><IconTrash size={15} /></button>
                   </div>
                 </div>
               ))}
@@ -216,11 +216,11 @@ export function TransactionsPage({ transactions, accounts, categories, currency,
           ))}
           {filtered.length === 0 && (
             <div className="p-10 text-center">
-              <p className="text-sm font-medium text-gray-700">{transactions.length === 0 ? "Nenhuma transaÃ§Ã£o neste mÃªs" : "Nenhum resultado com os filtros atuais"}</p>
-              <p className="mt-1 text-[12px] text-gray-400">{transactions.length === 0 ? "Adicione uma movimentaÃ§Ã£o ou importe um CSV para comeÃ§ar." : "Limpe os filtros ou ajuste a busca para ver mais lanÃ§amentos."}</p>
+              <p className="text-sm font-medium text-gray-700">{transactions.length === 0 ? "Nenhuma transação neste mês" : "Nenhum resultado com os filtros atuais"}</p>
+              <p className="mt-1 text-[12px] text-gray-400">{transactions.length === 0 ? "Adicione uma movimentação ou importe um CSV para começar." : "Limpe os filtros ou ajuste a busca para ver mais lançamentos."}</p>
               <div className="mt-4 flex flex-wrap justify-center gap-2">
                 {transactions.length === 0 ? (
-                  <button onClick={onNewTransaction} className="bg-gray-900 text-white px-4 py-2.5 rounded-xl text-[13px] font-semibold hover:bg-gray-800 transition-colors">Nova transaÃ§Ã£o</button>
+                  <button onClick={onNewTransaction} className="bg-gray-900 text-white px-4 py-2.5 rounded-xl text-[13px] font-semibold hover:bg-gray-800 transition-colors">Nova transação</button>
                 ) : (
                   <button onClick={resetFilters} className="border border-border px-4 py-2.5 rounded-xl text-[13px] font-semibold text-gray-600 hover:bg-gray-50 transition-colors">Limpar filtros</button>
                 )}

@@ -108,6 +108,30 @@ export async function authenticateLocalAccount(email: string, password: string) 
   return toUser(account);
 }
 
+export function localAccountExists(email: string) {
+  return readAccounts().some(account => account.email === normalizeEmail(email));
+}
+
+export function findLocalUserByEmail(email: string) {
+  const account = readAccounts().find(item => item.email === normalizeEmail(email));
+  return account ? toUser(account) : null;
+}
+
+export async function resetLocalAccountPassword(email: string, password: string) {
+  const nextEmail = normalizeEmail(email);
+  if (password.length < 6) throw new Error("A senha precisa ter pelo menos 6 caracteres.");
+
+  const accounts = readAccounts();
+  const account = accounts.find(item => item.email === nextEmail);
+  if (!account) throw new Error("Nenhuma conta foi encontrada com esse e-mail.");
+
+  const passwordSalt = globalThis.crypto.randomUUID();
+  const passwordHash = await hashPassword(password, passwordSalt);
+  writeAccounts(accounts.map(item => (
+    item.id === account.id ? { ...item, passwordSalt, passwordHash } : item
+  )));
+}
+
 export function updateLocalAccountUser(user: User) {
   const nextName = user.name.trim();
   const nextEmail = normalizeEmail(user.email);

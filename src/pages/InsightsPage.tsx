@@ -78,11 +78,11 @@ export function InsightsPage({
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-[1200px] mx-auto space-y-5 animate-fade-in">
-      <section className="bg-gray-950 text-white rounded-2xl p-5 sm:p-6 overflow-hidden relative">
-        <div className="relative z-10 max-w-3xl">
-          <p className="text-[11px] font-semibold uppercase text-white/45">Leitura do rastro financeiro</p>
-          <h2 className="mt-2 text-2xl sm:text-3xl font-semibold tracking-tight capitalize">{selectedMonthLabel}</h2>
-          <p className="mt-2 text-sm text-white/55 leading-6">Sinais automáticos para revisar lançamentos, contas, cartões, orçamentos e movimentos que merecem atenção.</p>
+      <section className="bg-card border border-border rounded-2xl p-5 sm:p-6">
+        <div className="max-w-3xl">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-gray-400">Relatórios</p>
+          <h2 className="mt-2 text-2xl sm:text-3xl font-semibold tracking-tight text-gray-950 capitalize">{selectedMonthLabel}</h2>
+          <p className="mt-2 text-sm text-gray-500 leading-6">Revisão objetiva de lançamentos, contas, cartões, orçamentos e movimentos que precisam de atenção.</p>
         </div>
       </section>
 
@@ -100,7 +100,7 @@ export function InsightsPage({
                 <item.icon size={16} />
               </div>
             </div>
-            <p className="mt-3 text-xl font-bold tabular-nums text-gray-900">{item.value}</p>
+            <p className="mt-3 text-xl font-semibold tabular-nums text-gray-900">{item.value}</p>
           </div>
         ))}
       </section>
@@ -139,7 +139,7 @@ export function InsightsPage({
                   <p className="text-[13px] font-semibold text-gray-900 truncate">{transaction.description}</p>
                   <p className="text-[11px] text-gray-400 mt-0.5">{transaction.category} · {formatDateFull(transaction.date)}</p>
                 </div>
-                <p className="text-[13px] font-bold text-danger-500 tabular-nums">{formatCurrency(transaction.amount, currency)}</p>
+                <p className="text-[13px] font-semibold text-danger-500 tabular-nums">{formatCurrency(transaction.amount, currency)}</p>
               </div>
             ))}
             {insights.largestExpenses.length === 0 && <p className="p-8 text-center text-sm text-gray-400">Sem despesas neste mês.</p>}
@@ -157,7 +157,7 @@ export function InsightsPage({
                   <p className="text-[13px] font-semibold text-gray-900 truncate">{account.name}</p>
                   <p className="text-[11px] text-gray-400">{linkedCount} lançamentos vinculados</p>
                 </div>
-                <p className={cn("text-[13px] font-bold tabular-nums", projected >= 0 ? "text-success-600" : "text-danger-500")}>{formatCurrency(projected, currency)}</p>
+                <p className={cn("text-[13px] font-semibold tabular-nums", projected >= 0 ? "text-success-600" : "text-danger-500")}>{formatCurrency(projected, currency)}</p>
               </div>
             ))}
           </div>
@@ -170,7 +170,7 @@ export function InsightsPage({
               <div key={category.id}>
                 <div className="flex items-center justify-between gap-3 mb-1.5">
                   <span className="text-[13px] font-semibold text-gray-800">{category.name}</span>
-                  <span className="text-[12px] font-bold text-gray-900 tabular-nums">{formatCurrency(category.spent, currency)}</span>
+                  <span className="text-[12px] font-semibold text-gray-900 tabular-nums">{formatCurrency(category.spent, currency)}</span>
                 </div>
                 <div className="h-1.5 rounded-full bg-gray-100 overflow-hidden">
                   <div className="h-full rounded-full" style={{ width: `${category.budget > 0 ? Math.min(100, (category.spent / category.budget) * 100) : 100}%`, backgroundColor: category.color }} />
@@ -195,10 +195,10 @@ export function InsightsPage({
                 </div>
                 <div className="min-w-0">
                   <p className="text-[13px] font-semibold text-gray-900 truncate">{transaction.description}</p>
-                  <p className="text-[11px] text-gray-400">{formatDateFull(transaction.date)} · {transaction.status === "pending" ? "Pendente" : "Concluido"}</p>
+                  <p className="text-[11px] text-gray-400">{formatDateFull(transaction.date)} · {transaction.status === "pending" ? "Pendente" : "Concluído"}</p>
                 </div>
               </div>
-              <p className={cn("text-[13px] font-bold tabular-nums", transaction.type === "income" ? "text-success-600" : "text-gray-800")}>{transaction.type === "income" ? "+" : "-"} {formatCurrency(transaction.amount, currency)}</p>
+              <p className={cn("text-[13px] font-semibold tabular-nums", transaction.type === "income" ? "text-success-600" : "text-gray-800")}>{transaction.type === "income" ? "+" : "-"} {formatCurrency(transaction.amount, currency)}</p>
             </div>
           ))}
         </div>

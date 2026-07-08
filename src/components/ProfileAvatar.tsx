@@ -21,7 +21,7 @@ export function getInitials(name: string) {
 
 export function ProfileAvatar({ user, className, textClassName }: ProfileAvatarProps) {
   return (
-    <div className={cn("relative overflow-hidden bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center text-white font-bold select-none", className)}>
+    <div className={cn("relative overflow-hidden bg-gray-900 flex items-center justify-center text-white font-semibold select-none", className)}>
       {user.avatarUrl ? (
         <img src={user.avatarUrl} alt={user.name} className="absolute inset-0 w-full h-full object-cover" />
       ) : (

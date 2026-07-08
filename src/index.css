@@ -12,16 +12,16 @@
   --font-sans: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-brand: "DenariusDisplay", "Arial Narrow", sans-serif;
 
-  --color-surface: #fafafa;
+  --color-surface: #f6f7f8;
   --color-card: #ffffff;
-  --color-border: #f0f0f0;
-  --color-border-hover: #e0e0e0;
+  --color-border: #e7e9ec;
+  --color-border-hover: #d5d9de;
 
   --color-brand-50: #f0f5ff;
   --color-brand-100: #e0eaff;
-  --color-brand-500: #3b6cf5;
-  --color-brand-600: #2b5ce5;
-  --color-brand-700: #1b4cd5;
+  --color-brand-500: #315fce;
+  --color-brand-600: #2852b5;
+  --color-brand-700: #214494;
 
   --color-success-50: #ecfdf5;
   --color-success-100: #d1fae5;
@@ -37,7 +37,7 @@
   --color-warning-100: #fef3c7;
   --color-warning-500: #f59e0b;
 
-  --color-sidebar: #111111;
+  --color-sidebar: #151719;
   --color-sidebar-hover: #1a1a1a;
   --color-sidebar-active: #252525;
   --color-sidebar-muted: #737373;
@@ -60,6 +60,27 @@
     -moz-osx-font-smoothing: grayscale;
     background-color: var(--color-surface);
     color: #111111;
+  }
+
+  button, input, select, textarea {
+    font: inherit;
+  }
+
+  button {
+    cursor: pointer;
+  }
+
+  button:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--color-brand-500) 45%, transparent);
+    outline-offset: 2px;
+  }
+
+  ::selection {
+    background: var(--color-brand-100);
+    color: #172554;
   }
 
   ::-webkit-scrollbar {
@@ -88,6 +109,32 @@
 }
 
 @layer utilities {
+  .input-auth {
+    width: 100%;
+    border: 1px solid var(--color-border);
+    border-radius: 0.75rem;
+    background: var(--color-surface);
+    padding-top: 0.75rem;
+    padding-bottom: 0.75rem;
+    font-size: 0.875rem;
+    outline: none;
+  }
+
+  .input-auth:focus {
+    border-color: var(--color-brand-500);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-brand-500) 20%, transparent);
+  }
+
+  /* Um raio mais contido deixa tabelas e painéis com aparência de produto,
+     sem o excesso de "cards fofos" comum em interfaces geradas. */
+  .rounded-2xl {
+    border-radius: 0.75rem;
+  }
+
+  .rounded-3xl {
+    border-radius: 1rem;
+  }
+
   .animate-slide-up {
     animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   }

@@ -68,7 +68,7 @@ export function CategoriesPage({ categories, currency, onAdd, onUpdate, onDelete
               </div>
 
               <div className="mt-4 flex gap-2">
-                <input value={budgetValue} onChange={event => setEditingBudget(prev => ({ ...prev, [category.id]: event.target.value }))} inputMode="decimal" className="flex-1 bg-surface border border-border rounded-xl px-3.5 py-2.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500" />
+                <input value={budgetValue} onChange={event => setEditingBudget(prev => ({ ...prev, [category.id]: event.target.value }))} inputMode="decimal" className="min-w-0 flex-1 bg-surface border border-border rounded-xl px-3.5 py-2.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500" />
                 <button onClick={() => void onUpdate(category.id, { budget: parseCurrencyInput(budgetValue) })} className="px-4 py-2.5 rounded-xl bg-gray-900 text-white text-[13px] font-semibold hover:bg-gray-800">Salvar</button>
               </div>
             </div>
