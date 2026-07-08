@@ -118,6 +118,24 @@ O repositório inclui um [`render.yaml`](render.yaml). Na Render:
 
 O front-end e a API são publicados no mesmo container. Portanto, não é necessário criar dois serviços nem definir `VITE_API_URL` em produção.
 
+## Hospedando na Vercel
+
+O repositório inclui um [`Dockerfile.vercel`](Dockerfile.vercel), que publica o front-end e a API Express no mesmo projeto.
+
+Configure na Vercel:
+
+- `MONGODB_URI`
+- `JWT_SECRET`
+- `CLIENT_URL=https://seu-projeto.vercel.app`
+- `SMTP_HOST`
+- `SMTP_PORT`
+- `SMTP_SECURE`
+- `SMTP_USER`
+- `SMTP_PASS`
+- `EMAIL_FROM`
+
+Não defina `VITE_API_URL`: em produção o front-end usa `/api` no mesmo domínio. Depois do primeiro deploy, confirme a URL definitiva da Vercel, atualize `CLIENT_URL` e faça um redeploy.
+
 ## Checklist antes de publicar
 
 - Crie o cluster e o usuário de banco no MongoDB Atlas.
@@ -161,6 +179,7 @@ server/
   routes/            autenticação, workspace e rotas REST especializadas
   utils/             e-mail, defaults e serializers
 Dockerfile           imagem única para front-end e API
+Dockerfile.vercel    imagem usada pela Vercel
 docker-compose.yml   aplicação e MongoDB persistente
 render.yaml          blueprint de hospedagem na Render
 .github/workflows/   validação automática antes do deploy
