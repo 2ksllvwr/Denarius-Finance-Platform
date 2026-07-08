@@ -1,4 +1,4 @@
-const CACHE_NAME = "denarius-shell-v2";
+const CACHE_NAME = "denarius-shell-v3";
 const SHELL_ASSETS = ["/", "/manifest.webmanifest", "/icon.svg", "/fonts/webfont.ttf"];
 
 self.addEventListener("install", event => {
@@ -19,12 +19,16 @@ self.addEventListener("activate", event => {
 
 self.addEventListener("fetch", event => {
   if (event.request.method !== "GET") return;
+  const url = new URL(event.request.url);
+  if (url.origin !== self.location.origin || url.pathname.startsWith("/api/")) return;
 
   event.respondWith(
     fetch(event.request)
       .then(response => {
-        const copy = response.clone();
-        caches.open(CACHE_NAME).then(cache => cache.put(event.request, copy));
+        if (response.ok) {
+          const copy = response.clone();
+          caches.open(CACHE_NAME).then(cache => cache.put(event.request, copy));
+        }
         return response;
       })
       .catch(() => {

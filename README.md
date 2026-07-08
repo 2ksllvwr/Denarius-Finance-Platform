@@ -104,6 +104,32 @@ docker compose up -d --build
 
 Para usar MongoDB Atlas em vez do container local, defina `MONGODB_URI` diretamente na plataforma de hospedagem. As variáveis obrigatórias em produção são `MONGODB_URI`, `JWT_SECRET`, `CLIENT_URL`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` e `EMAIL_FROM`.
 
+## Hospedando na Render
+
+O repositório inclui um [`render.yaml`](render.yaml). Na Render:
+
+1. Crie um **Blueprint** apontando para este repositório.
+2. Informe `MONGODB_URI` com a conexão do MongoDB Atlas.
+3. Informe `SMTP_HOST`, `SMTP_USER`, `SMTP_PASS` e `EMAIL_FROM`.
+4. A Render gera `JWT_SECRET` automaticamente.
+5. Aguarde o health check em `/api/health`.
+
+`CLIENT_URL` é detectada automaticamente no domínio padrão da Render. Ao configurar domínio próprio, defina `CLIENT_URL=https://seudominio.com`. Para aceitar mais de uma origem, separe as URLs por vírgula.
+
+O front-end e a API são publicados no mesmo container. Portanto, não é necessário criar dois serviços nem definir `VITE_API_URL` em produção.
+
+## Checklist antes de publicar
+
+- Crie o cluster e o usuário de banco no MongoDB Atlas.
+- Libere a conexão da hospedagem no controle de acesso de rede do Atlas.
+- Configure um remetente validado no provedor SMTP.
+- Nunca envie o arquivo `.env` para o GitHub.
+- Use HTTPS e mantenha `CLIENT_URL` exatamente igual ao domínio público.
+- Execute `npm run check:deploy`.
+- Confirme que `/api/health` retorna `200` e `"database": true`.
+- Teste cadastro, recebimento do PIN, login, recuperação de senha e acesso em outro dispositivo.
+- Configure backups automáticos do MongoDB antes de receber usuários reais.
+
 ## Scripts
 
 ```bash
@@ -115,6 +141,7 @@ npm run test         # testes unitários
 npm run build        # build de produção
 npm run preview      # preview do build
 npm run audit        # auditoria de dependências
+npm run check:deploy # tipagem, testes, build e auditoria de produção
 ```
 
 ## Estrutura
@@ -135,6 +162,8 @@ server/
   utils/             e-mail, defaults e serializers
 Dockerfile           imagem única para front-end e API
 docker-compose.yml   aplicação e MongoDB persistente
+render.yaml          blueprint de hospedagem na Render
+.github/workflows/   validação automática antes do deploy
 docs/
   screenshots/       imagens SVG para README/portfólio
   IMPLEMENTACAO-EXTERNA.md
@@ -225,6 +254,7 @@ Também são aceitos termos em inglês como `income`, `expense`, `completed` e `
 - A instalação PWA oferece o shell da interface, mas operações sincronizadas exigem conexão com a API.
 - O `.env` não deve ser versionado.
 - A API exige MongoDB, JWT e SMTP configurados para iniciar.
+- O endpoint `/api/health` só retorna sucesso quando o MongoDB está conectado.
 - A geração de PDF usa a janela de impressão do navegador.
 - O checkout de assinatura ainda é placeholder para integração futura.
 

@@ -1,7 +1,7 @@
 {
   "name": "Denarius",
   "short_name": "Denarius",
-  "description": "App financeiro offline-first com dashboard mensal, metas, parcelamentos e recorrências.",
+  "description": "Plataforma web para organização financeira, metas, parcelamentos e recorrências.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

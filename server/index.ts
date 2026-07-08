@@ -1,10 +1,12 @@
 import cors from "cors";
 import express, { type NextFunction, type Request, type Response } from "express";
 import rateLimit from "express-rate-limit";
+import helmet from "helmet";
+import type { Server } from "http";
 import path from "path";
 import { fileURLToPath } from "url";
 import { ZodError } from "zod";
-import { connectDatabase } from "./config/db";
+import { connectDatabase, disconnectDatabase, isDatabaseReady } from "./config/db";
 import { assertServerEnv, env } from "./config/env";
 import authRoutes from "./routes/auth";
 import billingRoutes from "./routes/billing";
@@ -22,11 +24,28 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const distPath = path.resolve(__dirname, "../dist");
 
 app.set("trust proxy", 1);
-app.use(cors({ origin: env.clientUrl, credentials: true }));
+app.use(cors({ origin: env.clientOrigins, credentials: true }));
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", "data:", "blob:", "https:"],
+      connectSrc: ["'self'", ...env.clientOrigins],
+      fontSrc: ["'self'", "data:"],
+      objectSrc: ["'none'"],
+      baseUri: ["'self'"],
+      frameAncestors: ["'none'"],
+    },
+  },
+  crossOriginEmbedderPolicy: false,
+}));
 app.use(express.json({ limit: "12mb" }));
 
 app.get("/api/health", (_req, res) => {
-  res.json({ ok: true, service: "DENARIUS-api" });
+  const database = isDatabaseReady();
+  res.status(database ? 200 : 503).json({ ok: database, service: "DENARIUS-api", database });
 });
 
 app.use("/api/auth", rateLimit({
@@ -74,14 +93,33 @@ app.use((error: unknown, _req: Request, res: Response, _next: NextFunction) => {
     : message.includes("inválida ou expirada")
       ? 400
       : 500;
-  res.status(status).json({ message: status === 409 ? "Registro duplicado." : message });
+  if (status >= 500) console.error(error);
+  res.status(status).json({
+    message: status === 409
+      ? "Registro duplicado."
+      : status >= 500 && env.nodeEnv === "production"
+        ? "Não foi possível concluir a operação."
+        : message,
+  });
 });
+
+let server: Server | undefined;
+
+async function shutdown(signal: string) {
+  console.log(`${signal} recebido. Encerrando o DENARIUS...`);
+  if (server) {
+    await new Promise<void>((resolve, reject) => {
+      server?.close(error => error ? reject(error) : resolve());
+    });
+  }
+  await disconnectDatabase();
+}
 
 async function bootstrap() {
   assertServerEnv();
   await connectDatabase();
-  app.listen(env.port, () => {
-    console.log(`DENARIUS API rodando em http://localhost:${env.port}/api`);
+  server = app.listen(env.port, "0.0.0.0", () => {
+    console.log(`DENARIUS rodando na porta ${env.port} (${env.nodeEnv}).`);
   });
 }
 
@@ -89,3 +127,14 @@ bootstrap().catch(error => {
   console.error(error instanceof Error ? error.message : error);
   process.exit(1);
 });
+
+for (const signal of ["SIGTERM", "SIGINT"] as const) {
+  process.once(signal, () => {
+    void shutdown(signal)
+      .then(() => process.exit(0))
+      .catch(error => {
+        console.error(error);
+        process.exit(1);
+      });
+  });
+}

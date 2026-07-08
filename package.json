@@ -13,7 +13,8 @@
     "server": "tsx server/index.ts",
     "typecheck": "tsc -b --pretty false",
     "test": "vitest run",
-    "audit": "npm audit"
+    "audit": "npm audit",
+    "check:deploy": "npm run typecheck && npm test && npm run build && npm audit --omit=dev"
   },
   "dependencies": {
     "@tailwindcss/vite": "4.1.17",
@@ -25,6 +26,7 @@
     "esbuild": "^0.28.1",
     "express": "^5.2.1",
     "express-rate-limit": "^8.2.1",
+    "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.0.2",
     "nodemailer": "^9.0.3",
