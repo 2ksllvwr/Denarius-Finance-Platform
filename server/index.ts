@@ -42,6 +42,14 @@ app.use(helmet({
   crossOriginEmbedderPolicy: false,
 }));
 app.use(express.json({ limit: "12mb" }));
+app.use("/api", async (_req, _res, next) => {
+  try {
+    await connectDatabase();
+    next();
+  } catch (error) {
+    next(error);
+  }
+});
 
 app.get("/api/health", (_req, res) => {
   const database = isDatabaseReady();
@@ -123,18 +131,22 @@ async function bootstrap() {
   });
 }
 
-bootstrap().catch(error => {
-  console.error(error instanceof Error ? error.message : error);
-  process.exit(1);
-});
-
-for (const signal of ["SIGTERM", "SIGINT"] as const) {
-  process.once(signal, () => {
-    void shutdown(signal)
-      .then(() => process.exit(0))
-      .catch(error => {
-        console.error(error);
-        process.exit(1);
-      });
+if (!process.env.VERCEL) {
+  bootstrap().catch(error => {
+    console.error(error instanceof Error ? error.message : error);
+    process.exit(1);
   });
+
+  for (const signal of ["SIGTERM", "SIGINT"] as const) {
+    process.once(signal, () => {
+      void shutdown(signal)
+        .then(() => process.exit(0))
+        .catch(error => {
+          console.error(error);
+          process.exit(1);
+        });
+    });
+  }
 }
+
+export default app;

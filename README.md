@@ -120,7 +120,7 @@ O front-end e a API são publicados no mesmo container. Portanto, não é necess
 
 ## Hospedando na Vercel
 
-O repositório inclui um [`Dockerfile.vercel`](Dockerfile.vercel), que publica o front-end e a API Express no mesmo projeto.
+O repositório inclui [`vercel.json`](vercel.json) e uma função Express em [`api/index.ts`](api/index.ts). O front-end Vite é servido pela CDN e as chamadas `/api/*` são encaminhadas para a função.
 
 Configure na Vercel:
 
@@ -179,7 +179,8 @@ server/
   routes/            autenticação, workspace e rotas REST especializadas
   utils/             e-mail, defaults e serializers
 Dockerfile           imagem única para front-end e API
-Dockerfile.vercel    imagem usada pela Vercel
+vercel.json          build, função e roteamento da Vercel
+api/index.ts         entrada serverless da API Express
 docker-compose.yml   aplicação e MongoDB persistente
 render.yaml          blueprint de hospedagem na Render
 .github/workflows/   validação automática antes do deploy
