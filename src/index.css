@@ -150,6 +150,9 @@
   .animate-auth-panel-enter {
     animation: authPanelEnter 0.68s cubic-bezier(0.16, 1, 0.3, 1);
   }
+  .animate-auth-panel-exit {
+    animation: authPanelExit 0.26s cubic-bezier(0.7, 0, 0.84, 0) forwards;
+  }
   .animate-auth-hero-shift {
     animation: authHeroShift 0.64s cubic-bezier(0.16, 1, 0.3, 1);
   }
@@ -179,11 +182,15 @@
   58% { transform: translateY(-4px) scale(1.01); opacity: 1; filter: blur(0); }
   100% { transform: translateY(0) scale(1); opacity: 1; filter: blur(0); }
 }
+@keyframes authPanelExit {
+  from { transform: translateY(0) scale(1); opacity: 1; filter: blur(0); }
+  to { transform: translateY(22px) scale(0.97); opacity: 0; filter: blur(8px); }
+}
 @keyframes authHeroShift {
   from { transform: translateX(48px) scale(1.04); opacity: 0.55; filter: blur(6px); }
   to { transform: translateX(0) scale(1); opacity: 1; filter: blur(0); }
 }
 @keyframes authHeroRise {
-  from { transform: translateY(24px) scale(0.98); opacity: 0; filter: blur(8px); }
+  from { transform: translateY(18px) scale(0.985); opacity: 0; filter: blur(5px); }
   to { transform: translateY(0) scale(1); opacity: 1; filter: blur(0); }
 }

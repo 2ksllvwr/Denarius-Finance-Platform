@@ -33,16 +33,26 @@ export function AuthScreen({
   const [verificationToken, setVerificationToken] = useState("");
   const [localError, setLocalError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [closing, setClosing] = useState(false);
 
   const hasForm = mode !== "choice";
   const isVerification = mode === "verify-register" || mode === "verify-reset";
 
   const showMode = (nextMode: AuthMode) => {
+    setClosing(false);
     setMode(nextMode);
     setLocalError(null);
     setMessage(null);
     setCode("");
     setVerificationToken("");
+  };
+
+  const closeForm = () => {
+    setClosing(true);
+    window.setTimeout(() => {
+      showMode("choice");
+      setClosing(false);
+    }, 260);
   };
 
   const validatePasswords = () => {
@@ -196,10 +206,13 @@ export function AuthScreen({
 
         {hasForm && (
           <section className="flex w-full items-center justify-center">
-            <div key={mode} className="w-full max-w-[430px] animate-auth-panel-enter rounded-3xl border border-white/10 bg-white/95 p-5 text-gray-950 shadow-2xl shadow-black/30 backdrop-blur-xl sm:p-7">
+            <div key={mode} className={cn(
+              "w-full max-w-[430px] rounded-3xl border border-white/10 bg-white/95 p-5 text-gray-950 shadow-2xl shadow-black/30 backdrop-blur-xl sm:p-7",
+              closing ? "animate-auth-panel-exit" : "animate-auth-panel-enter",
+            )}>
               <div className="mb-6 flex items-center justify-between gap-4">
                 <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gray-950 text-white"><IconBarChart size={20} /></div>
-                <button type="button" onClick={() => showMode("choice")} className="text-xs font-semibold text-gray-400 transition-colors hover:text-gray-900">
+                <button type="button" onClick={closeForm} className="text-xs font-semibold text-gray-400 transition-colors hover:text-gray-900">
                   Fechar
                 </button>
               </div>
