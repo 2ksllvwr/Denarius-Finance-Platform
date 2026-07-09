@@ -28,3 +28,20 @@ export function BrandName({ className }: { className?: string }) {
     </span>
   );
 }
+
+export function SidebarBrandName({ collapsed, className }: { collapsed: boolean; className?: string }) {
+  return (
+    <span
+      aria-label="Denarius"
+      className={cn("inline-flex items-baseline overflow-hidden leading-none text-white select-none", className)}
+    >
+      <span className="font-brand text-[34px] leading-none">D</span>
+      <span className={cn(
+        "font-brand text-[38px] leading-none transition-[max-width,opacity,transform] duration-300 ease-out",
+        collapsed ? "max-w-0 translate-x-[-4px] opacity-0" : "max-w-[180px] translate-x-0 opacity-100",
+      )}>
+        enarius
+      </span>
+    </span>
+  );
+}
