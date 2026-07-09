@@ -34,17 +34,31 @@ export function AuthScreen({
   const [localError, setLocalError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [closing, setClosing] = useState(false);
+  const [opening, setOpening] = useState(false);
 
   const hasForm = mode !== "choice";
   const isVerification = mode === "verify-register" || mode === "verify-reset";
 
   const showMode = (nextMode: AuthMode) => {
     setClosing(false);
+    setOpening(false);
     setMode(nextMode);
     setLocalError(null);
     setMessage(null);
     setCode("");
     setVerificationToken("");
+  };
+
+  const openForm = (nextMode: Exclude<AuthMode, "choice">) => {
+    setOpening(true);
+    setLocalError(null);
+    setMessage(null);
+    setCode("");
+    setVerificationToken("");
+    window.setTimeout(() => {
+      setMode(nextMode);
+      setOpening(false);
+    }, 240);
   };
 
   const closeForm = () => {
@@ -153,7 +167,8 @@ export function AuthScreen({
       >
         <section className={cn(
           "flex w-full flex-col transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)]",
-          hasForm ? "max-w-[420px] items-start text-left animate-auth-hero-shift" : "max-w-3xl items-center text-center animate-auth-hero-rise",
+          hasForm ? "max-w-[420px] items-start text-left animate-auth-hero-shift" : "max-w-3xl items-center text-center",
+          opening ? "pointer-events-none animate-auth-choice-exit" : !hasForm && "animate-auth-hero-rise",
         )}>
           <div className={cn("flex flex-col", hasForm ? "mb-8 items-start" : "mb-16 items-center")}>
             <div className="text-left">
@@ -176,14 +191,14 @@ export function AuthScreen({
               <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
                 <button
                   type="button"
-                  onClick={() => showMode("login")}
+                  onClick={() => openForm("login")}
                   className="group inline-flex items-center justify-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-semibold text-gray-950 shadow-2xl shadow-black/25 transition-all hover:-translate-y-0.5 hover:bg-white/95"
                 >
                   Entrar <IconChevronRight size={15} className="transition-transform group-hover:translate-x-0.5" />
                 </button>
                 <button
                   type="button"
-                  onClick={() => showMode("register")}
+                  onClick={() => openForm("register")}
                   className="inline-flex items-center justify-center rounded-xl border border-white/12 bg-white/[0.06] px-5 py-3 text-sm font-semibold text-white transition-all hover:-translate-y-0.5 hover:bg-white/[0.10]"
                 >
                   Registrar
