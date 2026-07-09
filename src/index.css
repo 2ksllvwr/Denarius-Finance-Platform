@@ -147,6 +147,15 @@
   .animate-auth-panel-down {
     animation: authPanelDown 0.55s cubic-bezier(0.16, 1, 0.3, 1);
   }
+  .animate-auth-panel-enter {
+    animation: authPanelEnter 0.68s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .animate-auth-hero-shift {
+    animation: authHeroShift 0.64s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .animate-auth-hero-rise {
+    animation: authHeroRise 0.48s cubic-bezier(0.16, 1, 0.3, 1);
+  }
 }
 
 @keyframes slideUp {
@@ -163,5 +172,18 @@
 }
 @keyframes authPanelDown {
   from { transform: translateY(-34px) scale(0.98); opacity: 0; filter: blur(8px); }
+  to { transform: translateY(0) scale(1); opacity: 1; filter: blur(0); }
+}
+@keyframes authPanelEnter {
+  0% { transform: translateY(34px) scale(0.94); opacity: 0; filter: blur(10px); }
+  58% { transform: translateY(-4px) scale(1.01); opacity: 1; filter: blur(0); }
+  100% { transform: translateY(0) scale(1); opacity: 1; filter: blur(0); }
+}
+@keyframes authHeroShift {
+  from { transform: translateX(48px) scale(1.04); opacity: 0.55; filter: blur(6px); }
+  to { transform: translateX(0) scale(1); opacity: 1; filter: blur(0); }
+}
+@keyframes authHeroRise {
+  from { transform: translateY(24px) scale(0.98); opacity: 0; filter: blur(8px); }
   to { transform: translateY(0) scale(1); opacity: 1; filter: blur(0); }
 }

@@ -141,7 +141,10 @@ export function AuthScreen({
           hasForm ? "max-w-[980px] items-center justify-center gap-8 lg:grid lg:grid-cols-[420px_430px] lg:items-center lg:gap-16" : "max-w-[1120px] items-center justify-center",
         )}
       >
-        <section className={cn("flex w-full flex-col", hasForm ? "max-w-[420px] items-start text-left" : "max-w-3xl items-center text-center")}>
+        <section className={cn(
+          "flex w-full flex-col transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)]",
+          hasForm ? "max-w-[420px] items-start text-left animate-auth-hero-shift" : "max-w-3xl items-center text-center animate-auth-hero-rise",
+        )}>
           <div className={cn("flex flex-col", hasForm ? "mb-8 items-start" : "mb-16 items-center")}>
             <div className="text-left">
               <p><BrandName className={cn("text-white", hasForm ? "text-[38px]" : "text-[58px]")} /></p>
@@ -193,7 +196,7 @@ export function AuthScreen({
 
         {hasForm && (
           <section className="flex w-full items-center justify-center">
-            <div key={mode} className="w-full max-w-[430px] animate-auth-panel-down rounded-3xl border border-white/10 bg-white/95 p-5 text-gray-950 shadow-2xl shadow-black/30 backdrop-blur-xl sm:p-7">
+            <div key={mode} className="w-full max-w-[430px] animate-auth-panel-enter rounded-3xl border border-white/10 bg-white/95 p-5 text-gray-950 shadow-2xl shadow-black/30 backdrop-blur-xl sm:p-7">
               <div className="mb-6 flex items-center justify-between gap-4">
                 <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gray-950 text-white"><IconBarChart size={20} /></div>
                 <button type="button" onClick={() => showMode("choice")} className="text-xs font-semibold text-gray-400 transition-colors hover:text-gray-900">
