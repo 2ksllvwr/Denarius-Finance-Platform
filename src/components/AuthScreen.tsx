@@ -1,7 +1,7 @@
 import { useState, type FormEvent, type ReactNode } from "react";
 import { BrandMark, BrandName } from "@/components/Brand";
+import { IconBarChart, IconChevronRight, IconMail, IconShield, IconUser } from "@/components/Icons";
 import { cn } from "@/utils/cn";
-import { IconBarChart, IconCheck, IconChevronRight, IconMail, IconShield, IconUser } from "@/components/Icons";
 
 type AuthMode = "choice" | "login" | "register" | "forgot" | "verify-register" | "verify-reset" | "reset-password";
 
@@ -129,33 +129,30 @@ export function AuthScreen({
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-[#07090d] text-white">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_18%,rgba(49,95,206,0.28),transparent_28%),radial-gradient(circle_at_82%_8%,rgba(16,185,129,0.14),transparent_24%),linear-gradient(135deg,#07090d_0%,#101318_48%,#050608_100%)]" />
-      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent" />
-      <div className="absolute -left-28 top-1/4 h-80 w-80 rounded-full border border-white/10" />
-      <div className="absolute right-[-10%] top-[-12%] h-[520px] w-[520px] rounded-full border border-white/10 bg-white/[0.02]" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_24%_18%,rgba(49,95,206,0.20),transparent_30%),radial-gradient(circle_at_78%_22%,rgba(16,185,129,0.10),transparent_28%),linear-gradient(135deg,#0a0d13_0%,#0d1118_52%,#050608_100%)]" />
+      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/25 to-transparent" />
+      <div className="absolute -left-32 top-1/3 h-80 w-80 rounded-full border border-white/[0.06]" />
+      <div className="absolute right-[-12%] top-[-18%] h-[520px] w-[520px] rounded-full border border-white/[0.07] bg-white/[0.015]" />
 
-      <main className="relative z-10 grid min-h-screen lg:grid-cols-[1.05fr_0.95fr]">
-        <section className="flex min-h-[54vh] flex-col justify-between px-5 py-6 sm:px-8 lg:min-h-screen lg:p-10">
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <BrandMark className="h-11 w-11 rounded-2xl border border-white/10 bg-white/[0.08] text-white shadow-2xl shadow-black/20" letterClassName="text-3xl" />
-              <div>
-                <p><BrandName /></p>
-                <p className="text-xs text-white/40">Finance SaaS</p>
-              </div>
+      <main className="relative z-10 mx-auto grid min-h-screen w-full max-w-[1280px] items-center gap-8 px-5 py-6 sm:px-8 lg:grid-cols-[1.02fr_0.78fr] lg:px-10">
+        <section className="flex min-h-[54vh] flex-col justify-between lg:min-h-[720px]">
+          <div className="flex items-center gap-3">
+            <BrandMark className="h-11 w-11 rounded-2xl border border-white/10 bg-white/[0.08] text-white shadow-2xl shadow-black/20" letterClassName="text-3xl" />
+            <div>
+              <p><BrandName /></p>
+              <p className="text-xs text-white/40">Finance SaaS</p>
             </div>
-            <span className="hidden rounded-full border border-white/10 bg-white/[0.06] px-3 py-1.5 text-[11px] font-medium text-white/55 sm:inline-flex">Ambiente seguro</span>
           </div>
 
           <div className="max-w-3xl py-12 lg:py-0">
             <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.07] px-3 py-1.5 text-xs text-white/60">
               <IconShield size={14} /> Conta protegida e dados sincronizados
             </div>
-            <h1 className="max-w-2xl text-4xl font-semibold leading-[1.03] tracking-[-0.05em] text-white sm:text-6xl lg:text-7xl">
+            <h1 className="max-w-2xl text-4xl font-semibold leading-[1.02] tracking-[-0.055em] text-white sm:text-6xl lg:text-[72px]">
               Financeiro claro para decisões melhores.
             </h1>
             <p className="mt-6 max-w-xl text-sm leading-7 text-white/55 sm:text-base">
-              Acompanhe entradas, despesas, recorrencias e metas em um painel privado, organizado e pronto para uso profissional.
+              Acompanhe entradas, despesas, recorrências e metas em um painel privado, organizado e pronto para uso profissional.
             </p>
 
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
@@ -182,27 +179,29 @@ export function AuthScreen({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-            {[
-              ["Conta", "e-mail verificado"],
-              ["Offline", "dados preservados"],
-              ["Privado", "por usuario"],
-            ].map(([itemTitle, desc]) => (
-              <div key={itemTitle} className="rounded-2xl border border-white/10 bg-white/[0.055] p-4 backdrop-blur">
-                <IconCheck size={15} className="mb-3 text-success-500" />
-                <p className="text-sm font-medium text-white">{itemTitle}</p>
-                <p className="mt-1 text-xs text-white/40">{desc}</p>
-              </div>
+          <div className="flex flex-wrap gap-x-6 gap-y-2 border-t border-white/10 pt-5 text-xs text-white/42">
+            {["E-mail verificado", "Dados preservados", "Acesso privado por usuario"].map(item => (
+              <span key={item} className="inline-flex items-center gap-2">
+                <span className="h-1.5 w-1.5 rounded-full bg-success-500" />
+                {item}
+              </span>
             ))}
           </div>
         </section>
 
-        <section className="flex items-end justify-center px-4 pb-5 sm:px-8 lg:items-center lg:py-10">
+        <section className="flex items-center justify-center">
           {!hasForm ? (
-            <div className="hidden w-full max-w-[430px] rounded-3xl border border-white/10 bg-white/[0.055] p-6 text-white/60 shadow-2xl shadow-black/25 backdrop-blur-xl lg:block">
-              <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-gray-950"><IconBarChart size={21} /></div>
-              <p className="text-sm font-medium text-white">Escolha como deseja continuar</p>
-              <p className="mt-2 text-sm leading-6 text-white/45">O formulario aparece com uma transicao suave assim que voce seleciona entrar ou registrar.</p>
+            <div className="w-full max-w-[430px] rounded-3xl border border-white/10 bg-white/[0.07] p-6 text-white/60 shadow-2xl shadow-black/25 backdrop-blur-xl">
+              <div className="mb-6 flex items-start justify-between gap-4">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-gray-950"><IconBarChart size={21} /></div>
+                <span className="rounded-full border border-white/10 bg-white/[0.06] px-3 py-1.5 text-[11px] font-medium text-white/55">Ambiente seguro</span>
+              </div>
+              <p className="text-base font-semibold text-white">Acesse sua area financeira</p>
+              <p className="mt-2 text-sm leading-6 text-white/45">Escolha uma opção para abrir o formulário com uma transição suave.</p>
+              <div className="mt-6 grid grid-cols-2 gap-3">
+                <button type="button" onClick={() => showMode("login")} className="rounded-xl bg-white px-4 py-3 text-sm font-semibold text-gray-950 transition-all hover:-translate-y-0.5 hover:bg-white/95">Entrar</button>
+                <button type="button" onClick={() => showMode("register")} className="rounded-xl border border-white/12 bg-white/[0.06] px-4 py-3 text-sm font-semibold text-white transition-all hover:-translate-y-0.5 hover:bg-white/[0.10]">Registrar</button>
+              </div>
             </div>
           ) : (
             <div key={mode} className="w-full max-w-[430px] animate-auth-panel-down rounded-3xl border border-white/10 bg-white/95 p-5 text-gray-950 shadow-2xl shadow-black/30 backdrop-blur-xl sm:p-7">
