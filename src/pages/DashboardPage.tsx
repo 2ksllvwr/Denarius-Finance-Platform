@@ -49,9 +49,14 @@ export function DashboardPage({ stats, transactions, categories, monthly, curren
     boxShadow: "0 8px 24px rgba(15, 23, 42, 0.08)",
     fontSize: 12,
   };
+  const kpis = [
+    { label: "Receitas", value: stats.income, marker: "bg-success-500", tone: "text-success-600" },
+    { label: "Despesas", value: stats.expense, marker: "bg-danger-500", tone: "text-danger-600" },
+    { label: "Pendentes", value: stats.pending, marker: "bg-warning-500", tone: "text-warning-500" },
+  ];
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 max-w-[1240px] mx-auto space-y-5 sm:space-y-6 animate-fade-in">
+    <div className="p-4 sm:p-6 lg:p-8 max-w-[1260px] mx-auto space-y-5 sm:space-y-6 animate-fade-in">
       <div className="flex items-end justify-between gap-4 py-1">
         <div>
           <p className="text-[11px] font-medium text-gray-400">Visão geral</p>
@@ -59,33 +64,31 @@ export function DashboardPage({ stats, transactions, categories, monthly, curren
         </div>
         <button onClick={onViewTransactions} className="hidden sm:flex items-center gap-1 text-[12px] font-medium text-gray-500 hover:text-gray-900">Ver extrato <IconChevronRight size={14} /></button>
       </div>
-      <section className="overflow-hidden rounded-2xl bg-gray-950 text-white">
-        <div className="px-5 py-6 sm:px-7 sm:py-7">
-          <div className="flex items-start justify-between gap-6">
+      <section className="overflow-hidden rounded-2xl border border-border bg-card shadow-[0_18px_50px_rgba(15,23,42,0.04)]">
+        <div className="relative overflow-hidden bg-gray-950 px-5 py-6 text-white sm:px-7 sm:py-7">
+          <div className="absolute right-[-90px] top-[-120px] h-72 w-72 rounded-full border border-white/10 bg-white/[0.03]" />
+          <div className="absolute bottom-[-140px] left-[-120px] h-80 w-80 rounded-full bg-brand-500/10 blur-3xl" />
+          <div className="relative flex items-start justify-between gap-6">
             <div>
               <p className="text-[11px] font-medium text-white/45">Resultado do mês</p>
               <p className="mt-2 text-3xl sm:text-[34px] font-semibold tracking-[-0.035em] tabular-nums">{formatCurrency(stats.balance, currency)}</p>
             </div>
             <span className={cn(
-              "mt-1 rounded-md border px-2 py-1 text-[10px] font-medium",
+              "mt-1 rounded-full border px-2.5 py-1 text-[10px] font-semibold",
               stats.balance >= 0 ? "border-success-500/25 bg-success-500/10 text-success-500" : "border-danger-500/25 bg-danger-500/10 text-danger-500",
             )}>
               {stats.balance >= 0 ? "Positivo" : "Negativo"}
             </span>
           </div>
         </div>
-        <div className="grid grid-cols-1 border-t border-white/10 sm:grid-cols-3">
-          {[
-            { label: "Receitas", value: stats.income, marker: "bg-success-500" },
-            { label: "Despesas", value: stats.expense, marker: "bg-danger-500" },
-            { label: "Valores pendentes", value: stats.pending, marker: "bg-warning-500" },
-          ].map((item, index) => (
-            <div key={item.label} className={cn("flex items-center justify-between px-5 py-4 sm:block sm:px-7 sm:py-5", index > 0 && "border-t border-white/10 sm:border-l sm:border-t-0")}>
+        <div className="grid grid-cols-1 border-t border-border sm:grid-cols-3">
+          {kpis.map((item, index) => (
+            <div key={item.label} className={cn("flex items-center justify-between px-5 py-4 sm:block sm:px-7 sm:py-5", index > 0 && "border-t border-border sm:border-l sm:border-t-0")}>
               <div className="flex items-center gap-2">
                 <span className={cn("h-1.5 w-1.5 rounded-full", item.marker)} />
-                <p className="text-[11px] text-white/45">{item.label}</p>
+                <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-gray-400">{item.label}</p>
               </div>
-              <p className="text-[14px] font-medium tabular-nums text-white/90 sm:mt-2 sm:text-base">{formatCurrency(item.value, currency)}</p>
+              <p className={cn("text-[14px] font-semibold tabular-nums sm:mt-2 sm:text-base", item.tone)}>{formatCurrency(item.value, currency)}</p>
             </div>
           ))}
         </div>

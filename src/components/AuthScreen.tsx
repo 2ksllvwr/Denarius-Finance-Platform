@@ -1,9 +1,9 @@
-import { useState, type FormEvent } from "react";
+import { useState, type FormEvent, type ReactNode } from "react";
 import { BrandMark, BrandName } from "@/components/Brand";
 import { cn } from "@/utils/cn";
-import { IconBarChart, IconCheck, IconMail, IconShield, IconUser } from "@/components/Icons";
+import { IconBarChart, IconCheck, IconChevronRight, IconMail, IconShield, IconUser } from "@/components/Icons";
 
-type AuthMode = "login" | "register" | "forgot" | "verify-register" | "verify-reset" | "reset-password";
+type AuthMode = "choice" | "login" | "register" | "forgot" | "verify-register" | "verify-reset" | "reset-password";
 
 interface AuthScreenProps {
   loading: boolean;
@@ -24,7 +24,7 @@ export function AuthScreen({
   onVerifyEmailCode,
   onResetPassword,
 }: AuthScreenProps) {
-  const [mode, setMode] = useState<AuthMode>("login");
+  const [mode, setMode] = useState<AuthMode>("choice");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -69,13 +69,13 @@ export function AuthScreen({
         if (!validatePasswords()) return;
         await onRequestEmailCode(email, "register");
         setMode("verify-register");
-        setMessage("Enviamos um código de seis dígitos para o seu e-mail.");
+        setMessage("Enviamos um codigo de seis digitos para o seu e-mail.");
         return;
       }
       if (mode === "forgot") {
         await onRequestEmailCode(email, "reset");
         setMode("verify-reset");
-        setMessage("Enviamos um código de seis dígitos para o seu e-mail.");
+        setMessage("Enviamos um codigo de seis digitos para o e-mail cadastrado.");
         return;
       }
       if (mode === "verify-register") {
@@ -97,9 +97,9 @@ export function AuthScreen({
       setPassword("");
       setConfirmPassword("");
       setMode("login");
-      setMessage("Senha alterada. Você já pode entrar na sua conta.");
+      setMessage("Senha alterada. Voce ja pode entrar na sua conta.");
     } catch (err) {
-      setLocalError(err instanceof Error ? err.message : "Não foi possível continuar.");
+      setLocalError(err instanceof Error ? err.message : "Nao foi possivel continuar.");
     }
   };
 
@@ -108,119 +108,173 @@ export function AuthScreen({
     setLocalError(null);
     try {
       await onRequestEmailCode(email, purpose);
-      setMessage("Um novo código foi enviado.");
+      setMessage("Um novo codigo foi enviado.");
     } catch (err) {
-      setLocalError(err instanceof Error ? err.message : "Não foi possível reenviar o código.");
+      setLocalError(err instanceof Error ? err.message : "Nao foi possivel reenviar o codigo.");
     }
   };
 
   const isVerification = mode === "verify-register" || mode === "verify-reset";
+  const hasForm = mode !== "choice";
   const title = mode === "login" ? "Entrar na conta"
-    : mode === "register" ? "Criar sua conta"
+    : mode === "register" ? "Criar conta"
       : mode === "forgot" ? "Recuperar acesso"
         : isVerification ? "Confirme seu e-mail"
           : "Criar nova senha";
-  const description = mode === "login" ? "Use seu e-mail e senha."
-    : mode === "register" ? "Informe seus dados para começar."
-      : mode === "forgot" ? "Enviaremos um código para o e-mail cadastrado."
-        : isVerification ? `Digite o código enviado para ${email}.`
+  const description = mode === "login" ? "Acesse seu painel financeiro com seguranca."
+    : mode === "register" ? "Crie seu acesso e confirme o e-mail para continuar."
+      : mode === "forgot" ? "Enviaremos um codigo para validar sua identidade."
+        : isVerification ? `Digite o codigo enviado para ${email}.`
           : "Escolha uma senha com pelo menos seis caracteres.";
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white grid lg:grid-cols-[1.05fr_0.95fr]">
-      <section className="hidden lg:flex flex-col justify-between p-10 bg-[radial-gradient(circle_at_top_left,#3156ff33,transparent_35%),linear-gradient(135deg,#111,#050505)]">
-        <div className="flex items-center gap-3">
-          <BrandMark className="w-11 h-11 rounded-2xl bg-white/10 border border-white/10 text-white" letterClassName="text-3xl" />
-          <div><p><BrandName /></p><p className="text-xs text-white/40">Finance SaaS</p></div>
-        </div>
-        <div className="max-w-xl">
-          <div className="inline-flex items-center gap-2 text-xs text-white/60 bg-white/10 border border-white/10 rounded-full px-3 py-1.5 mb-5">
-            <IconShield size={14} /> Conta protegida neste dispositivo
-          </div>
-          <h1 className="text-5xl font-semibold tracking-tight leading-tight">Controle financeiro com login próprio.</h1>
-          <p className="text-white/55 mt-5 text-base leading-7">Cadastre sua conta, entre com e-mail e senha e continue acessando seus dados mesmo sem conexão.</p>
-        </div>
-        <div className="grid grid-cols-3 gap-3">
-          {[["Conta", "e-mail verificado"], ["Offline", "dados salvos"], ["Privado", "por usuário"]].map(([itemTitle, desc]) => (
-            <div key={itemTitle} className="rounded-2xl bg-white/[0.06] border border-white/10 p-4">
-              <IconCheck size={16} className="text-success-500 mb-3" />
-              <p className="text-sm font-medium">{itemTitle}</p><p className="text-xs text-white/40 mt-1">{desc}</p>
-            </div>
-          ))}
-        </div>
-      </section>
+    <div className="relative min-h-screen overflow-hidden bg-[#07090d] text-white">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_18%,rgba(49,95,206,0.28),transparent_28%),radial-gradient(circle_at_82%_8%,rgba(16,185,129,0.14),transparent_24%),linear-gradient(135deg,#07090d_0%,#101318_48%,#050608_100%)]" />
+      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent" />
+      <div className="absolute -left-28 top-1/4 h-80 w-80 rounded-full border border-white/10" />
+      <div className="absolute right-[-10%] top-[-12%] h-[520px] w-[520px] rounded-full border border-white/10 bg-white/[0.02]" />
 
-      <section className="flex items-center justify-center p-5 sm:p-8 bg-surface text-gray-900">
-        <div className="w-full max-w-[420px]">
-          <div className="lg:hidden flex items-center gap-3 mb-8">
-            <BrandMark className="w-10 h-10 rounded-2xl bg-gray-900 text-white" letterClassName="text-3xl" />
-            <div><p><BrandName /></p><p className="text-xs text-gray-400">Finance SaaS</p></div>
-          </div>
-
-          <div className="bg-card border border-border rounded-3xl p-5 sm:p-7 shadow-sm">
-            <div className="w-11 h-11 rounded-2xl bg-gray-900 text-white flex items-center justify-center mb-5"><IconBarChart size={20} /></div>
-
-            {(mode === "login" || mode === "register") && (
-              <div className="grid grid-cols-2 gap-2 rounded-2xl bg-surface p-1 border border-border mb-6">
-                <button type="button" onClick={() => showMode("login")} className={cn("rounded-xl py-2.5 text-sm font-semibold transition-all", mode === "login" ? "bg-card text-gray-900 shadow-sm" : "text-gray-400 hover:text-gray-700")}>Entrar</button>
-                <button type="button" onClick={() => showMode("register")} className={cn("rounded-xl py-2.5 text-sm font-semibold transition-all", mode === "register" ? "bg-card text-gray-900 shadow-sm" : "text-gray-400 hover:text-gray-700")}>Criar conta</button>
+      <main className="relative z-10 grid min-h-screen lg:grid-cols-[1.05fr_0.95fr]">
+        <section className="flex min-h-[54vh] flex-col justify-between px-5 py-6 sm:px-8 lg:min-h-screen lg:p-10">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <BrandMark className="h-11 w-11 rounded-2xl border border-white/10 bg-white/[0.08] text-white shadow-2xl shadow-black/20" letterClassName="text-3xl" />
+              <div>
+                <p><BrandName /></p>
+                <p className="text-xs text-white/40">Finance SaaS</p>
               </div>
-            )}
-
-            {mode !== "login" && mode !== "register" && (
-              <button type="button" onClick={() => showMode("login")} className="mb-5 text-xs font-medium text-gray-400 hover:text-gray-800">← Voltar para o login</button>
-            )}
-
-            <h2 className="text-2xl font-semibold tracking-tight">{title}</h2>
-            <p className="text-sm text-gray-400 mt-2">{description}</p>
-
-            <form onSubmit={submit} className="mt-6 space-y-3">
-              {mode === "register" && (
-                <Field label="Nome"><IconUser size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-300" /><input value={name} onChange={event => setName(event.target.value)} autoComplete="name" className="input-auth pl-9" /></Field>
-              )}
-
-              {(mode === "login" || mode === "register" || mode === "forgot") && (
-                <Field label="E-mail"><IconMail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-300" /><input value={email} onChange={event => setEmail(event.target.value)} type="email" autoComplete="email" required className="input-auth pl-9" /></Field>
-              )}
-
-              {(mode === "login" || mode === "register" || mode === "reset-password") && (
-                <Field label={mode === "reset-password" ? "Nova senha" : "Senha"}><input value={password} onChange={event => setPassword(event.target.value)} type="password" autoComplete={mode === "login" ? "current-password" : "new-password"} required className="input-auth px-3" /></Field>
-              )}
-
-              {(mode === "register" || mode === "reset-password") && (
-                <Field label="Confirmar senha"><input value={confirmPassword} onChange={event => setConfirmPassword(event.target.value)} type="password" autoComplete="new-password" required className="input-auth px-3" /></Field>
-              )}
-
-              {isVerification && (
-                <Field label="Código de verificação">
-                  <input value={code} onChange={event => setCode(event.target.value.replace(/\D/g, "").slice(0, 6))} inputMode="numeric" autoComplete="one-time-code" placeholder="000000" required className="input-auth px-3 text-center text-xl font-semibold tracking-[0.3em] tabular-nums" />
-                </Field>
-              )}
-
-              {mode === "login" && (
-                <div className="flex justify-end"><button type="button" onClick={() => showMode("forgot")} className="text-xs font-medium text-gray-500 hover:text-gray-900">Esqueceu a senha?</button></div>
-              )}
-
-              {(error || localError) && <div className="rounded-xl bg-danger-50 border border-danger-100 text-danger-600 text-xs p-3">{localError ?? error}</div>}
-              {message && <div className="rounded-xl bg-success-50 border border-success-100 text-success-600 text-xs p-3">{message}</div>}
-
-              <button type="submit" disabled={loading} className={cn("w-full rounded-xl bg-gray-900 text-white py-3 text-sm font-semibold transition-all hover:bg-gray-800", loading && "opacity-60 cursor-wait")}>
-                {loading ? "Carregando..." : mode === "login" ? "Entrar" : mode === "register" ? "Enviar código" : mode === "forgot" ? "Recuperar senha" : isVerification ? "Confirmar código" : "Salvar nova senha"}
-              </button>
-
-              {isVerification && <button type="button" disabled={loading} onClick={resendCode} className="w-full py-1 text-xs font-medium text-gray-400 hover:text-gray-800 disabled:opacity-50">Reenviar código</button>}
-            </form>
+            </div>
+            <span className="hidden rounded-full border border-white/10 bg-white/[0.06] px-3 py-1.5 text-[11px] font-medium text-white/55 sm:inline-flex">Ambiente seguro</span>
           </div>
-        </div>
-      </section>
+
+          <div className="max-w-3xl py-12 lg:py-0">
+            <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.07] px-3 py-1.5 text-xs text-white/60">
+              <IconShield size={14} /> Conta protegida e dados sincronizados
+            </div>
+            <h1 className="max-w-2xl text-4xl font-semibold leading-[1.03] tracking-[-0.05em] text-white sm:text-6xl lg:text-7xl">
+              Financeiro claro para decisões melhores.
+            </h1>
+            <p className="mt-6 max-w-xl text-sm leading-7 text-white/55 sm:text-base">
+              Acompanhe entradas, despesas, recorrencias e metas em um painel privado, organizado e pronto para uso profissional.
+            </p>
+
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+              <button
+                type="button"
+                onClick={() => showMode("login")}
+                className={cn(
+                  "group inline-flex items-center justify-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-semibold text-gray-950 shadow-2xl shadow-black/25 transition-all hover:-translate-y-0.5 hover:bg-white/95",
+                  mode === "login" && "ring-2 ring-white/30",
+                )}
+              >
+                Entrar <IconChevronRight size={15} className="transition-transform group-hover:translate-x-0.5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => showMode("register")}
+                className={cn(
+                  "inline-flex items-center justify-center rounded-xl border border-white/12 bg-white/[0.06] px-5 py-3 text-sm font-semibold text-white transition-all hover:-translate-y-0.5 hover:bg-white/[0.10]",
+                  mode === "register" && "bg-white/[0.14]",
+                )}
+              >
+                Registrar
+              </button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            {[
+              ["Conta", "e-mail verificado"],
+              ["Offline", "dados preservados"],
+              ["Privado", "por usuario"],
+            ].map(([itemTitle, desc]) => (
+              <div key={itemTitle} className="rounded-2xl border border-white/10 bg-white/[0.055] p-4 backdrop-blur">
+                <IconCheck size={15} className="mb-3 text-success-500" />
+                <p className="text-sm font-medium text-white">{itemTitle}</p>
+                <p className="mt-1 text-xs text-white/40">{desc}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="flex items-end justify-center px-4 pb-5 sm:px-8 lg:items-center lg:py-10">
+          {!hasForm ? (
+            <div className="hidden w-full max-w-[430px] rounded-3xl border border-white/10 bg-white/[0.055] p-6 text-white/60 shadow-2xl shadow-black/25 backdrop-blur-xl lg:block">
+              <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-gray-950"><IconBarChart size={21} /></div>
+              <p className="text-sm font-medium text-white">Escolha como deseja continuar</p>
+              <p className="mt-2 text-sm leading-6 text-white/45">O formulario aparece com uma transicao suave assim que voce seleciona entrar ou registrar.</p>
+            </div>
+          ) : (
+            <div key={mode} className="w-full max-w-[430px] animate-auth-panel-down rounded-3xl border border-white/10 bg-white/95 p-5 text-gray-950 shadow-2xl shadow-black/30 backdrop-blur-xl sm:p-7">
+              <div className="mb-6 flex items-center justify-between gap-4">
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gray-950 text-white"><IconBarChart size={20} /></div>
+                <button type="button" onClick={() => showMode("choice")} className="text-xs font-semibold text-gray-400 transition-colors hover:text-gray-900">
+                  Fechar
+                </button>
+              </div>
+
+              {(mode === "login" || mode === "register") && (
+                <div className="mb-6 grid grid-cols-2 gap-1 rounded-xl border border-border bg-surface p-1">
+                  <button type="button" onClick={() => showMode("login")} className={cn("rounded-lg py-2.5 text-sm font-semibold transition-all", mode === "login" ? "bg-card text-gray-950 shadow-sm" : "text-gray-400 hover:text-gray-700")}>Entrar</button>
+                  <button type="button" onClick={() => showMode("register")} className={cn("rounded-lg py-2.5 text-sm font-semibold transition-all", mode === "register" ? "bg-card text-gray-950 shadow-sm" : "text-gray-400 hover:text-gray-700")}>Registrar</button>
+                </div>
+              )}
+
+              {mode !== "login" && mode !== "register" && (
+                <button type="button" onClick={() => showMode("login")} className="mb-5 text-xs font-semibold text-gray-400 hover:text-gray-900">Voltar para o login</button>
+              )}
+
+              <h2 className="text-2xl font-semibold tracking-[-0.03em]">{title}</h2>
+              <p className="mt-2 text-sm leading-6 text-gray-500">{description}</p>
+
+              <form onSubmit={submit} className="mt-6 space-y-3">
+                {mode === "register" && (
+                  <Field label="Nome"><IconUser size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-300" /><input value={name} onChange={event => setName(event.target.value)} autoComplete="name" className="input-auth pl-9" /></Field>
+                )}
+
+                {(mode === "login" || mode === "register" || mode === "forgot") && (
+                  <Field label="E-mail"><IconMail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-300" /><input value={email} onChange={event => setEmail(event.target.value)} type="email" autoComplete="email" required className="input-auth pl-9" /></Field>
+                )}
+
+                {(mode === "login" || mode === "register" || mode === "reset-password") && (
+                  <Field label={mode === "reset-password" ? "Nova senha" : "Senha"}><input value={password} onChange={event => setPassword(event.target.value)} type="password" autoComplete={mode === "login" ? "current-password" : "new-password"} required className="input-auth px-3" /></Field>
+                )}
+
+                {(mode === "register" || mode === "reset-password") && (
+                  <Field label="Confirmar senha"><input value={confirmPassword} onChange={event => setConfirmPassword(event.target.value)} type="password" autoComplete="new-password" required className="input-auth px-3" /></Field>
+                )}
+
+                {isVerification && (
+                  <Field label="Codigo de verificacao">
+                    <input value={code} onChange={event => setCode(event.target.value.replace(/\D/g, "").slice(0, 6))} inputMode="numeric" autoComplete="one-time-code" placeholder="000000" required className="input-auth px-3 text-center text-xl font-semibold tracking-[0.3em] tabular-nums" />
+                  </Field>
+                )}
+
+                {mode === "login" && (
+                  <div className="flex justify-end"><button type="button" onClick={() => showMode("forgot")} className="text-xs font-semibold text-gray-500 hover:text-gray-950">Esqueceu a senha?</button></div>
+                )}
+
+                {(error || localError) && <div className="rounded-xl border border-danger-100 bg-danger-50 p-3 text-xs text-danger-600">{localError ?? error}</div>}
+                {message && <div className="rounded-xl border border-success-100 bg-success-50 p-3 text-xs text-success-600">{message}</div>}
+
+                <button type="submit" disabled={loading} className={cn("w-full rounded-xl bg-gray-950 py-3 text-sm font-semibold text-white transition-all hover:bg-gray-800 active:scale-[0.99]", loading && "cursor-wait opacity-60")}>
+                  {loading ? "Carregando..." : mode === "login" ? "Entrar" : mode === "register" ? "Enviar codigo" : mode === "forgot" ? "Recuperar senha" : isVerification ? "Confirmar codigo" : "Salvar nova senha"}
+                </button>
+
+                {isVerification && <button type="button" disabled={loading} onClick={resendCode} className="w-full py-1 text-xs font-semibold text-gray-400 hover:text-gray-800 disabled:opacity-50">Reenviar codigo</button>}
+              </form>
+            </div>
+          )}
+        </section>
+      </main>
     </div>
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
     <label className="block">
-      <span className="text-[11px] font-medium text-gray-400 block mb-1.5">{label}</span>
+      <span className="mb-1.5 block text-[11px] font-semibold text-gray-400">{label}</span>
       <div className="relative">{children}</div>
     </label>
   );

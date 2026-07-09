@@ -281,11 +281,11 @@ export function Layout({
   };
 
   return (
-    <div className="flex h-dvh bg-surface font-sans antialiased overflow-hidden">
+    <div className="flex h-dvh bg-[#f7f8fa] font-sans antialiased overflow-hidden">
       {mobileOpen && <div className="lg:hidden fixed inset-0 bg-black/45 z-40 animate-fade-in backdrop-blur-[2px]" onClick={() => setMobileOpen(false)} />}
 
       <aside className={cn(
-        "fixed lg:relative inset-y-0 left-0 z-50 h-dvh bg-sidebar flex flex-col flex-shrink-0 shadow-2xl lg:shadow-none will-change-transform transition-[transform,width] duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]",
+        "fixed lg:relative inset-y-0 left-0 z-50 h-dvh bg-sidebar flex flex-col flex-shrink-0 shadow-2xl lg:shadow-none will-change-transform transition-[transform,width] duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] border-r border-white/5",
         mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
         collapsed ? "w-[min(84vw,320px)] lg:w-[76px]" : "w-[min(84vw,320px)] lg:w-[252px]",
       )} data-sidebar-root="true">
@@ -356,7 +356,7 @@ export function Layout({
       </aside>
 
       <main className="flex-1 flex flex-col overflow-hidden min-w-0">
-        <header className="h-[72px] border-b border-border bg-card flex items-center justify-between px-4 sm:px-6 flex-shrink-0 gap-3">
+        <header className="h-[72px] border-b border-border bg-white/92 backdrop-blur-xl flex items-center justify-between px-4 sm:px-6 flex-shrink-0 gap-3">
           <div className="flex items-center gap-3 min-w-0">
             <SidebarToggleButton
               open={mobileOpen}
@@ -481,7 +481,7 @@ export function Layout({
               )}
             </div>
 
-            <button onClick={onNewTransaction} className="bg-gray-900 text-white pl-2.5 pr-3.5 py-2 rounded-xl text-[13px] font-medium hover:bg-gray-800 transition-all flex items-center gap-1.5 shadow-sm active:scale-[0.97]">
+            <button onClick={onNewTransaction} className="bg-gray-950 text-white pl-2.5 pr-3.5 py-2 rounded-xl text-[13px] font-semibold hover:bg-gray-800 transition-all flex items-center gap-1.5 shadow-sm active:scale-[0.97]">
               <IconPlus size={16} />
               <span className="hidden sm:inline">Nova transação</span>
               <span className="sm:hidden">Nova</span>
