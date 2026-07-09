@@ -341,16 +341,13 @@ export function Layout({
                 <ProfileAvatar user={user} className="w-9 h-9 rounded-lg flex-shrink-0" textClassName="text-[11px]" />
                 <div className="min-w-0 flex-1">
                   <p className="text-white text-[13px] font-medium truncate">{user.name}</p>
-                  <p className="text-white/40 text-[11px] truncate">{user.title || `Plano ${user.plan}`}</p>
+                  {user.title && <p className="text-white/40 text-[11px] truncate">{user.title}</p>}
                 </div>
               </div>
             </button>
           )}
           <button onClick={onLogout} className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-white/35 hover:text-white/70 hover:bg-white/[0.04] transition-all text-xs">
             <IconLogout size={15} /> {(!collapsed || mobileOpen) && <span>Sair</span>}
-          </button>
-          <button onClick={() => setCollapsed(!collapsed)} className="hidden lg:flex w-full items-center justify-center gap-2 py-2.5 rounded-xl text-white/30 hover:text-white/60 hover:bg-white/[0.04] transition-all text-xs">
-            {collapsed ? <IconChevronRight size={16} /> : <><IconChevronLeft size={16} /><span>Recolher</span></>}
           </button>
         </div>
       </aside>
@@ -505,9 +502,6 @@ export function Layout({
                   <div className="p-2">
                     <button onClick={() => goTo("settings")} className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-[13px] font-medium text-gray-600 hover:bg-gray-50">
                       <IconSettings size={15} /> Editar perfil
-                    </button>
-                    <button onClick={() => goTo("billing")} className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-[13px] font-medium text-gray-600 hover:bg-gray-50">
-                      <IconBarChart size={15} /> Plano {user.plan}
                     </button>
                     <button onClick={onLogout} className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-[13px] font-medium text-danger-500 hover:bg-danger-50">
                       <IconLogout size={15} /> Sair

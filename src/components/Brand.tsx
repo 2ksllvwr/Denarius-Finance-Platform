@@ -6,8 +6,8 @@ interface BrandMarkProps {
 }
 
 const romanDStyle = {
-  fontFamily: "Georgia, \"Times New Roman\", serif",
-  fontWeight: 500,
+  fontFamily: "\"DenariusDisplay\", Georgia, serif",
+  fontWeight: 400,
 };
 
 export function BrandMark({ className, letterClassName }: BrandMarkProps) {
