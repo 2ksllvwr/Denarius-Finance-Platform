@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { BrandName } from "@/components/Brand";
+import { BrandMark, BrandName } from "@/components/Brand";
 import {
   IconBarChart,
   IconBell,
@@ -291,7 +291,11 @@ export function Layout({
       )} data-sidebar-root="true">
         <div className="h-16 flex items-center justify-between px-4 flex-shrink-0">
           <button onClick={() => goTo("dashboard")} className="flex items-center gap-3 min-w-0">
-            <BrandName className={cn("text-white transition-all", collapsed && !mobileOpen ? "text-[22px] -rotate-90 origin-center" : "text-[38px]")} />
+            {collapsed && !mobileOpen ? (
+              <BrandMark className="w-9 h-9 rounded-xl bg-white/10 text-white flex-shrink-0" letterClassName="text-3xl" />
+            ) : (
+              <BrandName className="text-white text-[38px]" />
+            )}
           </button>
           <SidebarToggleButton
             open={mobileOpen}
