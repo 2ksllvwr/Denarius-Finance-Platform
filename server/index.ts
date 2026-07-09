@@ -7,7 +7,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { ZodError } from "zod";
 import { connectDatabase, disconnectDatabase, isDatabaseReady } from "./config/db";
-import { assertServerEnv, env } from "./config/env";
+import { assertServerEnv, env, getServerEnvIssues } from "./config/env";
 import authRoutes from "./routes/auth";
 import billingRoutes from "./routes/billing";
 import categoriesRoutes from "./routes/categories";
@@ -42,18 +42,40 @@ app.use(helmet({
   crossOriginEmbedderPolicy: false,
 }));
 app.use(express.json({ limit: "12mb" }));
+
+app.get("/api/health", async (_req, res) => {
+  const issues = getServerEnvIssues();
+  let database = isDatabaseReady();
+  let databaseError: string | undefined;
+
+  if (!issues.length && !database) {
+    try {
+      await connectDatabase();
+      database = isDatabaseReady();
+    } catch (error) {
+      databaseError = error instanceof Error ? error.message : "Falha desconhecida ao conectar ao MongoDB.";
+    }
+  }
+
+  const ok = issues.length === 0 && database;
+  res.status(ok ? 200 : issues.length ? 500 : 503).json({
+    ok,
+    service: "DENARIUS-api",
+    environment: issues.length ? "invalid" : "valid",
+    database,
+    issues,
+    databaseError,
+  });
+});
+
 app.use("/api", async (_req, _res, next) => {
   try {
+    assertServerEnv();
     await connectDatabase();
     next();
   } catch (error) {
     next(error);
   }
-});
-
-app.get("/api/health", (_req, res) => {
-  const database = isDatabaseReady();
-  res.status(database ? 200 : 503).json({ ok: database, service: "DENARIUS-api", database });
 });
 
 app.use("/api/auth", rateLimit({

@@ -23,7 +23,7 @@ export const env = {
   emailFrom: process.env.EMAIL_FROM ?? "",
 };
 
-export function assertServerEnv() {
+export function getServerEnvIssues() {
   const missing: string[] = [];
   if (!env.mongodbUri) missing.push("MONGODB_URI");
   if (!env.jwtSecret) missing.push("JWT_SECRET");
@@ -32,26 +32,35 @@ export function assertServerEnv() {
   if (!env.smtpPass) missing.push("SMTP_PASS");
   if (!env.emailFrom) missing.push("EMAIL_FROM");
 
+  const issues: string[] = [];
   if (missing.length) {
-    throw new Error(
-      `Variáveis obrigatórias ausentes: ${missing.join(", ")}. Copie .env.example para .env e preencha os valores.`,
-    );
+    issues.push(`Variaveis obrigatorias ausentes: ${missing.join(", ")}.`);
   }
 
   if (!Number.isInteger(env.port) || env.port < 1 || env.port > 65535) {
-    throw new Error("PORT precisa ser uma porta TCP válida.");
+    issues.push("PORT precisa ser uma porta TCP valida.");
   }
   if (env.jwtSecret.length < 32) {
-    throw new Error("JWT_SECRET precisa ter pelo menos 32 caracteres.");
+    issues.push("JWT_SECRET precisa ter pelo menos 32 caracteres.");
   }
   if (!Number.isInteger(env.smtpPort) || env.smtpPort < 1 || env.smtpPort > 65535) {
-    throw new Error("SMTP_PORT precisa ser uma porta TCP válida.");
+    issues.push("SMTP_PORT precisa ser uma porta TCP valida.");
   }
   for (const origin of env.clientOrigins) {
     try {
       new URL(origin);
     } catch {
-      throw new Error("CLIENT_URL precisa conter URLs válidas com http:// ou https://.");
+      issues.push("CLIENT_URL precisa conter URLs validas com http:// ou https://.");
     }
+  }
+
+  return issues;
+}
+
+export function assertServerEnv() {
+  const issues = getServerEnvIssues();
+
+  if (issues.length) {
+    throw new Error(`${issues.join(" ")} Copie .env.example para .env e preencha os valores.`);
   }
 }
