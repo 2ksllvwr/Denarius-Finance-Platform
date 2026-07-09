@@ -20,6 +20,7 @@ import transactionsRoutes from "./routes/transactions";
 import workspaceRoutes from "./routes/workspace";
 
 const app = express();
+const currentFile = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const distPath = path.resolve(__dirname, "../dist");
 
@@ -153,7 +154,10 @@ async function bootstrap() {
   });
 }
 
-if (!process.env.VERCEL) {
+const entryPoint = process.argv[1] ? path.resolve(process.argv[1]) : "";
+const isDirectRun = entryPoint === currentFile;
+
+if (isDirectRun) {
   bootstrap().catch(error => {
     console.error(error instanceof Error ? error.message : error);
     process.exit(1);
