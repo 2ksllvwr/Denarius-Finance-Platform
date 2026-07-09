@@ -289,8 +289,8 @@ export function Layout({
         mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
         collapsed ? "w-[min(84vw,320px)] lg:w-[76px]" : "w-[min(84vw,320px)] lg:w-[252px]",
       )} data-sidebar-root="true">
-        <div className="h-16 flex items-center justify-between px-4 flex-shrink-0">
-          <button onClick={() => goTo("dashboard")} className="flex items-center gap-3 min-w-0">
+        <div className={cn("h-16 flex items-center justify-between flex-shrink-0", collapsed && !mobileOpen ? "px-4" : "px-5")}>
+          <button onClick={() => goTo("dashboard")} className={cn("flex items-center min-w-0", collapsed && !mobileOpen ? "justify-center" : "justify-start")}>
             <SidebarBrandName collapsed={collapsed && !mobileOpen} />
           </button>
           <SidebarToggleButton
