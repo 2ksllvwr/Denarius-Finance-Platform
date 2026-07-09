@@ -1,7 +1,7 @@
 import { Router } from "express";
-import { requireAuth, type AuthRequest } from "../middleware/auth";
-import { UserModel } from "../models/User";
-import { serializeUser } from "../utils/serializers";
+import { requireAuth, type AuthRequest } from "../middleware/auth.js";
+import { UserModel } from "../models/User.js";
+import { serializeUser } from "../utils/serializers.js";
 
 const router = Router();
 router.use(requireAuth);

@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
-import { requireAuth, type AuthRequest } from "../middleware/auth";
-import { WorkspaceModel } from "../models/Workspace";
+import { requireAuth, type AuthRequest } from "../middleware/auth.js";
+import { WorkspaceModel } from "../models/Workspace.js";
 
 const router = Router();
 router.use(requireAuth);

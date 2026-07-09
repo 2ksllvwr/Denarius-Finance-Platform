@@ -1,8 +1,8 @@
 import { Router } from "express";
 import { z } from "zod";
-import { requireAuth, type AuthRequest } from "../middleware/auth";
-import { SettingsModel } from "../models/Settings";
-import { serializeSettings } from "../utils/serializers";
+import { requireAuth, type AuthRequest } from "../middleware/auth.js";
+import { SettingsModel } from "../models/Settings.js";
+import { serializeSettings } from "../utils/serializers.js";
 
 const router = Router();
 router.use(requireAuth);

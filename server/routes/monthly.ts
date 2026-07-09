@@ -1,9 +1,9 @@
 import { Router } from "express";
 import { Types } from "mongoose";
 import { z } from "zod";
-import { requireAuth, type AuthRequest } from "../middleware/auth";
-import { MonthlyClosureModel } from "../models/MonthlyClosure";
-import { MonthlyGoalModel } from "../models/MonthlyGoal";
+import { requireAuth, type AuthRequest } from "../middleware/auth.js";
+import { MonthlyClosureModel } from "../models/MonthlyClosure.js";
+import { MonthlyGoalModel } from "../models/MonthlyGoal.js";
 
 const router = Router();
 router.use(requireAuth);

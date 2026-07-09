@@ -1,9 +1,9 @@
 import { Router } from "express";
 import { Types } from "mongoose";
-import { requireAuth, type AuthRequest } from "../middleware/auth";
-import { CategoryModel } from "../models/Category";
-import { TransactionModel } from "../models/Transaction";
-import { serializeCategory, serializeTransaction } from "../utils/serializers";
+import { requireAuth, type AuthRequest } from "../middleware/auth.js";
+import { CategoryModel } from "../models/Category.js";
+import { TransactionModel } from "../models/Transaction.js";
+import { serializeCategory, serializeTransaction } from "../utils/serializers.js";
 
 const router = Router();
 router.use(requireAuth);

@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { requireAuth, type AuthRequest } from "../middleware/auth";
-import { TransactionModel } from "../models/Transaction";
+import { requireAuth, type AuthRequest } from "../middleware/auth.js";
+import { TransactionModel } from "../models/Transaction.js";
 
 const router = Router();
 router.use(requireAuth);

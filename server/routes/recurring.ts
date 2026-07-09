@@ -1,8 +1,8 @@
 import { Router } from "express";
 import { Types } from "mongoose";
 import { z } from "zod";
-import { requireAuth, type AuthRequest } from "../middleware/auth";
-import { RecurringTransactionModel } from "../models/RecurringTransaction";
+import { requireAuth, type AuthRequest } from "../middleware/auth.js";
+import { RecurringTransactionModel } from "../models/RecurringTransaction.js";
 
 const router = Router();
 router.use(requireAuth);

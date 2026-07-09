@@ -2,12 +2,12 @@ import bcrypt from "bcryptjs";
 import { Router } from "express";
 import jwt from "jsonwebtoken";
 import { z } from "zod";
-import { env } from "../config/env";
-import { requireAuth, type AuthRequest } from "../middleware/auth";
-import { EmailVerificationModel } from "../models/EmailVerification";
-import { UserModel } from "../models/User";
-import { sendVerificationCode } from "../utils/email";
-import { serializeUser } from "../utils/serializers";
+import { env } from "../config/env.js";
+import { requireAuth, type AuthRequest } from "../middleware/auth.js";
+import { EmailVerificationModel } from "../models/EmailVerification.js";
+import { UserModel } from "../models/User.js";
+import { sendVerificationCode } from "../utils/email.js";
+import { serializeUser } from "../utils/serializers.js";
 
 const router = Router();
 

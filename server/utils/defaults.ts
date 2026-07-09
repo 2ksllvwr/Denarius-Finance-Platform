@@ -1,7 +1,7 @@
 import { Types } from "mongoose";
-import { CategoryModel } from "../models/Category";
-import { SettingsModel } from "../models/Settings";
-import { TransactionModel } from "../models/Transaction";
+import { CategoryModel } from "../models/Category.js";
+import { SettingsModel } from "../models/Settings.js";
+import { TransactionModel } from "../models/Transaction.js";
 
 const defaultCategories = [
   { name: "Moradia", icon: "🏠", color: "#6366f1", budget: 3000 },

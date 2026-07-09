@@ -1,7 +1,7 @@
-import type { CategoryDocument } from "../models/Category";
-import type { TransactionDocument } from "../models/Transaction";
-import type { UserDocument } from "../models/User";
-import type { SettingsDocument } from "../models/Settings";
+import type { CategoryDocument } from "../models/Category.js";
+import type { TransactionDocument } from "../models/Transaction.js";
+import type { UserDocument } from "../models/User.js";
+import type { SettingsDocument } from "../models/Settings.js";
 
 export function serializeUser(user: UserDocument) {
   return {
