@@ -1,5 +1,5 @@
 const CACHE_NAME = "denarius-shell-v3";
-const SHELL_ASSETS = ["/", "/manifest.webmanifest", "/icon.svg", "/fonts/webfont.ttf"];
+const SHELL_ASSETS = ["/", "/manifest.webmanifest", "/icon.svg", "/fonts/avenue-de-madison.ttf"];
 
 self.addEventListener("install", event => {
   event.waitUntil(

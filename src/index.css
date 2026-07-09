@@ -2,7 +2,7 @@
 
 @font-face {
   font-family: "DenariusDisplay";
-  src: url("/fonts/webfont.ttf") format("truetype");
+  src: url("/fonts/avenue-de-madison.ttf") format("truetype");
   font-weight: 400;
   font-style: normal;
   font-display: swap;
@@ -10,7 +10,7 @@
 
 @theme {
   --font-sans: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --font-brand: "DenariusDisplay", "Arial Narrow", sans-serif;
+  --font-brand: "DenariusDisplay", "Georgia", serif;
 
   --color-surface: #f7f8fa;
   --color-card: #ffffff;

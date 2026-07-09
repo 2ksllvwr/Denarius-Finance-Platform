@@ -1,5 +1,5 @@
 import { useState, type FormEvent, type ReactNode } from "react";
-import { BrandMark, BrandName } from "@/components/Brand";
+import { BrandName } from "@/components/Brand";
 import { IconBarChart, IconChevronRight, IconMail, IconShield, IconUser } from "@/components/Icons";
 import { cn } from "@/utils/cn";
 
@@ -142,11 +142,10 @@ export function AuthScreen({
         )}
       >
         <section className={cn("flex w-full flex-col", hasForm ? "max-w-2xl items-start text-left" : "max-w-3xl items-center text-center")}>
-          <div className={cn("flex items-center gap-3", !hasForm && "mb-16")}>
-            <BrandMark className="h-11 w-11 rounded-2xl border border-white/10 bg-white/[0.08] text-white shadow-2xl shadow-black/20" letterClassName="text-3xl" />
+          <div className={cn("flex flex-col", hasForm ? "items-start" : "items-center", !hasForm && "mb-16")}>
             <div className="text-left">
-              <p><BrandName /></p>
-              <p className="text-xs text-white/40">Finance SaaS</p>
+              <p><BrandName className={cn("text-white", hasForm ? "text-[46px]" : "text-[58px]")} /></p>
+              <p className={cn("mt-1 text-xs tracking-[0.18em] text-white/40 uppercase", !hasForm && "text-center")}>Finance SaaS</p>
             </div>
           </div>
 
