@@ -58,7 +58,7 @@ export function AuthScreen({
     window.setTimeout(() => {
       setMode(nextMode);
       setOpening(false);
-    }, 240);
+    }, 420);
   };
 
   const closeForm = () => {

@@ -154,13 +154,13 @@
     animation: authPanelExit 0.26s cubic-bezier(0.7, 0, 0.84, 0) forwards;
   }
   .animate-auth-hero-shift {
-    animation: authHeroShift 0.64s cubic-bezier(0.16, 1, 0.3, 1);
+    animation: authHeroShift 0.72s cubic-bezier(0.16, 1, 0.3, 1);
   }
   .animate-auth-hero-rise {
-    animation: authHeroRise 0.42s ease-out;
+    animation: authHeroRise 0.62s ease-out;
   }
   .animate-auth-choice-exit {
-    animation: authChoiceExit 0.24s ease-in forwards;
+    animation: authChoiceExit 0.42s ease-in-out forwards;
   }
 }
 
@@ -181,9 +181,9 @@
   to { transform: translateY(0) scale(1); opacity: 1; filter: blur(0); }
 }
 @keyframes authPanelEnter {
-  0% { transform: translateY(34px) scale(0.94); opacity: 0; filter: blur(10px); }
-  58% { transform: translateY(-4px) scale(1.01); opacity: 1; filter: blur(0); }
-  100% { transform: translateY(0) scale(1); opacity: 1; filter: blur(0); }
+  0% { transform: translateY(28px); opacity: 0; }
+  60% { transform: translateY(-3px); opacity: 1; }
+  100% { transform: translateY(0); opacity: 1; }
 }
 @keyframes authPanelExit {
   from { transform: translateY(0) scale(1); opacity: 1; filter: blur(0); }
@@ -199,5 +199,5 @@
 }
 @keyframes authChoiceExit {
   from { transform: translateY(0); opacity: 1; }
-  to { transform: translateY(-14px); opacity: 0; }
+  to { transform: translateY(-18px); opacity: 0; }
 }
