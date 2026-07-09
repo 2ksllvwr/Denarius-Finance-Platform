@@ -137,26 +137,26 @@ export function AuthScreen({
 
       <main
         className={cn(
-          "relative z-10 mx-auto flex min-h-screen w-full max-w-[1120px] flex-col px-5 py-6 sm:px-8 lg:px-10",
-          hasForm ? "items-center justify-center gap-8 lg:grid lg:grid-cols-[0.95fr_430px] lg:items-center" : "items-center justify-center",
+          "relative z-10 mx-auto flex min-h-screen w-full flex-col px-5 py-6 sm:px-8 lg:px-10",
+          hasForm ? "max-w-[980px] items-center justify-center gap-8 lg:grid lg:grid-cols-[420px_430px] lg:items-center lg:gap-16" : "max-w-[1120px] items-center justify-center",
         )}
       >
-        <section className={cn("flex w-full flex-col", hasForm ? "max-w-2xl items-start text-left" : "max-w-3xl items-center text-center")}>
-          <div className={cn("flex flex-col", hasForm ? "items-start" : "items-center", !hasForm && "mb-16")}>
+        <section className={cn("flex w-full flex-col", hasForm ? "max-w-[420px] items-start text-left" : "max-w-3xl items-center text-center")}>
+          <div className={cn("flex flex-col", hasForm ? "mb-8 items-start" : "mb-16 items-center")}>
             <div className="text-left">
-              <p><BrandName className={cn("text-white", hasForm ? "text-[46px]" : "text-[58px]")} /></p>
+              <p><BrandName className={cn("text-white", hasForm ? "text-[38px]" : "text-[58px]")} /></p>
               <p className={cn("mt-1 text-xs tracking-[0.18em] text-white/40 uppercase", !hasForm && "text-center")}>Finance SaaS</p>
             </div>
           </div>
 
-          <div className={cn("py-10 lg:py-0", hasForm ? "max-w-2xl" : "max-w-3xl")}>
+          <div className={cn(hasForm ? "max-w-[420px]" : "max-w-3xl py-10 lg:py-0")}>
             <div className={cn("mb-5 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.07] px-3 py-1.5 text-xs text-white/60", !hasForm && "mx-auto")}>
               <IconShield size={14} /> Conta protegida e dados sincronizados
             </div>
-            <h1 className={cn("text-4xl font-semibold leading-[1.02] tracking-[-0.055em] text-white sm:text-6xl", hasForm ? "max-w-2xl lg:text-[64px]" : "mx-auto max-w-3xl lg:text-[72px]")}>
+            <h1 className={cn("font-semibold leading-[1.03] tracking-[-0.055em] text-white", hasForm ? "max-w-[420px] text-4xl lg:text-[42px]" : "mx-auto max-w-3xl text-4xl sm:text-6xl lg:text-[72px]")}>
               Financeiro claro para decisoes melhores.
             </h1>
-            <p className={cn("mt-6 text-sm leading-7 text-white/55 sm:text-base", hasForm ? "max-w-xl" : "mx-auto max-w-2xl")}>
+            <p className={cn("mt-6 text-sm leading-7 text-white/55", hasForm ? "max-w-[390px]" : "mx-auto max-w-2xl sm:text-base")}>
               Acompanhe entradas, despesas, recorrencias e metas em um painel privado, organizado e pronto para uso profissional.
             </p>
 
