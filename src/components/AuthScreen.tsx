@@ -145,7 +145,6 @@ export function AuthScreen({
           <div className={cn("flex flex-col", hasForm ? "mb-8 items-start" : "mb-16 items-center")}>
             <div className="text-left">
               <p><BrandName className={cn("text-white", hasForm ? "text-[38px]" : "text-[58px]")} /></p>
-              <p className={cn("mt-1 text-xs tracking-[0.18em] text-white/40 uppercase", !hasForm && "text-center")}>Finance SaaS</p>
             </div>
           </div>
 
