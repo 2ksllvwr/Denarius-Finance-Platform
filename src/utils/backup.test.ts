@@ -15,6 +15,7 @@ const backup: DenariusBackup = {
   monthlyGoals: [],
   monthlyClosures: [],
   recurringTransactions: [],
+  debtAllocations: [],
 };
 
 describe("backup utils", () => {

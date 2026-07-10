@@ -4,6 +4,7 @@ import {
   type Account,
   type BackupSnapshot,
   DEFAULT_SETTINGS,
+  type DebtAllocation,
   type DenariusBackup,
   INITIAL_ACCOUNTS,
   INITIAL_CATEGORIES,
@@ -25,7 +26,7 @@ import { findLocalUserByEmail } from "@/utils/localAuth";
 import { readLocalStorage, writeLocalStorage } from "@/utils/localStore";
 
 type Mode = "api" | "local";
-type WorkspaceResource = "transactions" | "deletedTransactions" | "categories" | "accounts" | "settings" | "notifications" | "monthlyGoals" | "monthlyClosures" | "recurringTransactions" | "backupSnapshots";
+type WorkspaceResource = "transactions" | "deletedTransactions" | "categories" | "accounts" | "settings" | "notifications" | "monthlyGoals" | "monthlyClosures" | "recurringTransactions" | "backupSnapshots" | "debtAllocations";
 
 const TOKEN_KEY = "fluxo.token";
 
@@ -42,6 +43,7 @@ interface WorkspaceData {
   monthlyClosures: MonthlyClosure[];
   recurringTransactions: RecurringTransaction[];
   backupSnapshots: BackupSnapshot[];
+  debtAllocations: DebtAllocation[];
 }
 
 export interface TransactionInput {
@@ -132,9 +134,10 @@ function readWorkspace(user: User | null): WorkspaceData {
       settings: { ...DEFAULT_SETTINGS },
       notifications: [],
       monthlyGoals: [],
-      monthlyClosures: [],
-      recurringTransactions: [],
-      backupSnapshots: [],
+    monthlyClosures: [],
+    recurringTransactions: [],
+    backupSnapshots: [],
+    debtAllocations: [],
     };
   }
 
@@ -155,6 +158,7 @@ function readWorkspace(user: User | null): WorkspaceData {
     monthlyClosures: readLocalStorage<MonthlyClosure[]>(workspaceKey(user.id, "monthlyClosures"), []),
     recurringTransactions: readLocalStorage<RecurringTransaction[]>(workspaceKey(user.id, "recurringTransactions"), []),
     backupSnapshots: readLocalStorage<BackupSnapshot[]>(workspaceKey(user.id, "backupSnapshots"), []),
+    debtAllocations: readLocalStorage<DebtAllocation[]>(workspaceKey(user.id, "debtAllocations"), []),
   };
 }
 
@@ -198,6 +202,10 @@ function writeWorkspace(user: User, workspace: Partial<WorkspaceData>) {
   if (workspace.backupSnapshots !== undefined) {
     writeLocalStorage(workspaceKey(user.id, "backupSnapshots"), workspace.backupSnapshots);
   }
+
+  if (workspace.debtAllocations !== undefined) {
+    writeLocalStorage(workspaceKey(user.id, "debtAllocations"), workspace.debtAllocations);
+  }
 }
 
 export function useFinanceApp() {
@@ -217,6 +225,7 @@ export function useFinanceApp() {
   const [monthlyClosures, setMonthlyClosures] = useState<MonthlyClosure[]>(activeWorkspace.monthlyClosures);
   const [recurringTransactions, setRecurringTransactions] = useState<RecurringTransaction[]>(activeWorkspace.recurringTransactions);
   const [backupSnapshots, setBackupSnapshots] = useState<BackupSnapshot[]>(activeWorkspace.backupSnapshots);
+  const [debtAllocations, setDebtAllocations] = useState<DebtAllocation[]>(activeWorkspace.debtAllocations);
   const [locked, setLocked] = useState(() => Boolean(activeWorkspace.settings.pinHash));
   const [selectedMonth, setSelectedMonth] = useState(() => getMonthKey());
   const [loading, setLoading] = useState(Boolean(initialToken));
@@ -245,6 +254,7 @@ export function useFinanceApp() {
       monthlyClosures: workspace.monthlyClosures ?? [],
       recurringTransactions: workspace.recurringTransactions ?? [],
       backupSnapshots: workspace.backupSnapshots ?? [],
+      debtAllocations: workspace.debtAllocations ?? [],
     };
     setTransactions(nextWorkspace.transactions);
     setDeletedTransactions(nextWorkspace.deletedTransactions);
@@ -256,6 +266,7 @@ export function useFinanceApp() {
     setMonthlyClosures(nextWorkspace.monthlyClosures);
     setRecurringTransactions(nextWorkspace.recurringTransactions);
     setBackupSnapshots(nextWorkspace.backupSnapshots);
+    setDebtAllocations(nextWorkspace.debtAllocations);
     setLocked(Boolean(nextWorkspace.settings.pinHash));
   }, []);
 
@@ -348,8 +359,9 @@ export function useFinanceApp() {
       monthlyGoals: overrides.monthlyGoals ?? monthlyGoals,
       monthlyClosures: overrides.monthlyClosures ?? monthlyClosures,
       recurringTransactions: overrides.recurringTransactions ?? recurringTransactions,
+      debtAllocations: overrides.debtAllocations ?? debtAllocations,
     };
-  }, [accounts, categories, deletedTransactions, monthlyClosures, monthlyGoals, recurringTransactions, settings, transactions, user]);
+  }, [accounts, categories, debtAllocations, deletedTransactions, monthlyClosures, monthlyGoals, recurringTransactions, settings, transactions, user]);
 
   const saveBackupSnapshot = useCallback((reason: BackupSnapshot["reason"], overrides: Partial<WorkspaceData> = {}, targetUser = user) => {
     const backup = buildBackup(overrides, targetUser);
@@ -433,6 +445,7 @@ export function useFinanceApp() {
         monthlyClosures: [],
         recurringTransactions: [],
         backupSnapshots: [],
+        debtAllocations: [],
       };
 
       writeLocalStorage(TOKEN_KEY, response.token);
@@ -496,13 +509,13 @@ export function useFinanceApp() {
 
   const logout = useCallback(() => {
     if (user) {
-      persistWorkspace({ transactions, deletedTransactions, categories, accounts, settings, notifications, monthlyGoals, monthlyClosures, recurringTransactions, backupSnapshots }, user);
+      persistWorkspace({ transactions, deletedTransactions, categories, accounts, settings, notifications, monthlyGoals, monthlyClosures, recurringTransactions, backupSnapshots, debtAllocations }, user);
     }
 
     localStorage.removeItem(TOKEN_KEY);
     setToken(null);
     setUser(null);
-  }, [accounts, backupSnapshots, categories, deletedTransactions, monthlyClosures, monthlyGoals, notifications, persistWorkspace, recurringTransactions, settings, transactions, user]);
+  }, [accounts, backupSnapshots, categories, debtAllocations, deletedTransactions, monthlyClosures, monthlyGoals, notifications, persistWorkspace, recurringTransactions, settings, transactions, user]);
 
   const addTransaction = useCallback(async (input: TransactionInput) => {
     const transactionMonth = input.date.slice(0, 7);
@@ -756,6 +769,7 @@ export function useFinanceApp() {
     const nextCategories = applyCategorySpent(backup.categories, backup.transactions);
     const nextAccounts = backup.accounts ?? createInitialAccounts();
     const nextDeletedTransactions = backup.deletedTransactions ?? [];
+    const nextDebtAllocations = backup.debtAllocations ?? [];
 
     setUser(importedUser);
     setTransactions(backup.transactions);
@@ -766,6 +780,7 @@ export function useFinanceApp() {
     setMonthlyGoals(backup.monthlyGoals);
     setMonthlyClosures(backup.monthlyClosures);
     setRecurringTransactions(backup.recurringTransactions);
+    setDebtAllocations(nextDebtAllocations);
     persistWorkspace({
       transactions: backup.transactions,
       deletedTransactions: nextDeletedTransactions,
@@ -775,6 +790,7 @@ export function useFinanceApp() {
       monthlyGoals: backup.monthlyGoals,
       monthlyClosures: backup.monthlyClosures,
       recurringTransactions: backup.recurringTransactions,
+      debtAllocations: nextDebtAllocations,
     }, importedUser);
     saveBackupSnapshot("import", {
       transactions: backup.transactions,
@@ -785,6 +801,7 @@ export function useFinanceApp() {
       monthlyGoals: backup.monthlyGoals,
       monthlyClosures: backup.monthlyClosures,
       recurringTransactions: backup.recurringTransactions,
+      debtAllocations: nextDebtAllocations,
     }, importedUser);
     pushNotification({ title: "Backup restaurado", message: "Seus dados foram restaurados neste perfil.", kind: "success" });
   }, [persistWorkspace, pushNotification, saveBackupSnapshot, token, user]);
@@ -811,6 +828,7 @@ export function useFinanceApp() {
     const nextCategories = applyCategorySpent(backup.categories, backup.transactions);
     const nextAccounts = backup.accounts ?? createInitialAccounts();
     const nextDeletedTransactions = backup.deletedTransactions ?? [];
+    const nextDebtAllocations = backup.debtAllocations ?? [];
 
     setTransactions(backup.transactions);
     setDeletedTransactions(nextDeletedTransactions);
@@ -820,6 +838,7 @@ export function useFinanceApp() {
     setMonthlyGoals(backup.monthlyGoals);
     setMonthlyClosures(backup.monthlyClosures);
     setRecurringTransactions(backup.recurringTransactions);
+    setDebtAllocations(nextDebtAllocations);
     persistWorkspace({
       transactions: backup.transactions,
       deletedTransactions: nextDeletedTransactions,
@@ -829,6 +848,7 @@ export function useFinanceApp() {
       monthlyGoals: backup.monthlyGoals,
       monthlyClosures: backup.monthlyClosures,
       recurringTransactions: backup.recurringTransactions,
+      debtAllocations: nextDebtAllocations,
     }, user);
     pushNotification({ title: "Snapshot restaurado", message: "Os dados locais voltaram para a versão escolhida.", kind: "success" });
   }, [backupSnapshots, persistWorkspace, pushNotification, user]);
@@ -1095,6 +1115,29 @@ export function useFinanceApp() {
     pushNotification({ title: "Plano atualizado", message: `Seu plano agora é ${plan}.`, kind: "success" });
   }, [pushNotification, token, user]);
 
+  const addDebtAllocation = useCallback(async (input: Omit<DebtAllocation, "id" | "createdAt">) => {
+    const allocation: DebtAllocation = {
+      ...input,
+      id: crypto.randomUUID(),
+      amount: Math.max(0, input.amount),
+      notes: input.notes?.trim(),
+      createdAt: new Date().toISOString(),
+    };
+    const nextAllocations = [allocation, ...debtAllocations];
+
+    setDebtAllocations(nextAllocations);
+    persistWorkspace({ debtAllocations: nextAllocations });
+    pushNotification({ title: "Distribuicao criada", message: "O pagamento manual foi salvo no organizador.", kind: "success" });
+  }, [debtAllocations, persistWorkspace, pushNotification]);
+
+  const deleteDebtAllocation = useCallback(async (id: string) => {
+    const nextAllocations = debtAllocations.filter(allocation => allocation.id !== id);
+
+    setDebtAllocations(nextAllocations);
+    persistWorkspace({ debtAllocations: nextAllocations });
+    pushNotification({ title: "Distribuicao removida", message: "O vinculo manual saiu do organizador.", kind: "info" });
+  }, [debtAllocations, persistWorkspace, pushNotification]);
+
   const refresh = useCallback(async () => {
     if (!token) return;
     setWorkspaceLoading(true);
@@ -1120,6 +1163,7 @@ export function useFinanceApp() {
     monthlyClosures,
     recurringTransactions,
     backupSnapshots,
+    debtAllocations,
     selectedMonthlyGoal,
     selectedMonthlyClosure,
     stats,
@@ -1177,6 +1221,8 @@ export function useFinanceApp() {
     updateAccount,
     deleteAccount,
     changePlan,
+    addDebtAllocation,
+    deleteDebtAllocation,
     refresh,
   };
 }

@@ -11,6 +11,7 @@ import { AccountsPage } from "@/pages/AccountsPage";
 import { BillingPage } from "@/pages/BillingPage";
 import { CategoriesPage } from "@/pages/CategoriesPage";
 import { DashboardPage } from "@/pages/DashboardPage";
+import { DebtOrganizerPage } from "@/pages/DebtOrganizerPage";
 import { InsightsPage } from "@/pages/InsightsPage";
 import { MonthlyPage } from "@/pages/MonthlyPage";
 import { OnboardingPage } from "@/pages/OnboardingPage";
@@ -153,6 +154,18 @@ export default function App() {
               onConfirm: () => finance.deleteTransaction(id),
             })}
             onNewTransaction={openNewTransaction}
+          />
+        )}
+
+        {page === "allocation" && (
+          <DebtOrganizerPage
+            transactions={finance.monthTransactions}
+            allocations={finance.debtAllocations}
+            selectedMonth={finance.selectedMonth}
+            selectedMonthLabel={finance.selectedMonthLabel}
+            currency={finance.settings.currency}
+            onAddAllocation={finance.addDebtAllocation}
+            onDeleteAllocation={finance.deleteDebtAllocation}
           />
         )}
 

@@ -1,4 +1,4 @@
-import type { Account, AppNotification, BackupSnapshot, Category, MonthlyClosure, MonthlyGoal, MonthlyPoint, RecurringTransaction, Settings, Stats, Transaction, User } from "@/data/types";
+import type { Account, AppNotification, BackupSnapshot, Category, DebtAllocation, MonthlyClosure, MonthlyGoal, MonthlyPoint, RecurringTransaction, Settings, Stats, Transaction, User } from "@/data/types";
 
 const API_URL = import.meta.env.VITE_API_URL ?? "/api";
 
@@ -13,6 +13,7 @@ export interface WorkspacePayload {
   monthlyClosures: MonthlyClosure[];
   recurringTransactions: RecurringTransaction[];
   backupSnapshots: BackupSnapshot[];
+  debtAllocations: DebtAllocation[];
 }
 
 export class ApiError extends Error {

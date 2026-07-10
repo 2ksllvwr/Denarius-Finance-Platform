@@ -17,6 +17,7 @@ const workspaceKeys = [
   "monthlyClosures",
   "recurringTransactions",
   "backupSnapshots",
+  "debtAllocations",
 ] as const;
 
 const workspacePatchSchema = z.object({
@@ -30,6 +31,7 @@ const workspacePatchSchema = z.object({
   monthlyClosures: z.array(z.unknown()).optional(),
   recurringTransactions: z.array(z.unknown()).optional(),
   backupSnapshots: z.array(z.unknown()).optional(),
+  debtAllocations: z.array(z.unknown()).optional(),
 }).strict();
 
 function serializeWorkspace(workspace: Awaited<ReturnType<typeof WorkspaceModel.findOne>>) {

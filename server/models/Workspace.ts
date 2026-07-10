@@ -13,6 +13,7 @@ const workspaceSchema = new Schema(
     monthlyClosures: { type: [Schema.Types.Mixed], default: [] },
     recurringTransactions: { type: [Schema.Types.Mixed], default: [] },
     backupSnapshots: { type: [Schema.Types.Mixed], default: [] },
+    debtAllocations: { type: [Schema.Types.Mixed], default: [] },
   },
   { timestamps: true, minimize: false },
 );

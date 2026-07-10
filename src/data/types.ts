@@ -107,6 +107,16 @@ export interface RecurringTransaction {
   lastGeneratedMonth?: string;
 }
 
+export interface DebtAllocation {
+  id: string;
+  month: string;
+  incomeId: string;
+  expenseId: string;
+  amount: number;
+  notes?: string;
+  createdAt: string;
+}
+
 export interface BackupSnapshot {
   id: string;
   createdAt: string;
@@ -131,6 +141,7 @@ export interface DenariusBackup {
   monthlyGoals: MonthlyGoal[];
   monthlyClosures: MonthlyClosure[];
   recurringTransactions: RecurringTransaction[];
+  debtAllocations: DebtAllocation[];
 }
 
 export interface Stats {
@@ -147,7 +158,7 @@ export interface MonthlyPoint {
   expense: number;
 }
 
-export type Page = "dashboard" | "insights" | "monthly" | "transactions" | "accounts" | "categories" | "settings" | "billing";
+export type Page = "dashboard" | "insights" | "monthly" | "transactions" | "allocation" | "accounts" | "categories" | "settings" | "billing";
 
 export const formatCurrency = (value: number, currency = "BRL") =>
   new Intl.NumberFormat("pt-BR", {

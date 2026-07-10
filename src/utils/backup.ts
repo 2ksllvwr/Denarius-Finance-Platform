@@ -41,5 +41,11 @@ export function parseBackupFile(text: string): DenariusBackup {
     throw new Error("Arquivo de backup inválido.");
   }
 
-  return { ...parsed, app: "Denarius", accounts: parsed.accounts ?? INITIAL_ACCOUNTS, deletedTransactions: parsed.deletedTransactions ?? [] } as DenariusBackup;
+  return {
+    ...parsed,
+    app: "Denarius",
+    accounts: parsed.accounts ?? INITIAL_ACCOUNTS,
+    deletedTransactions: parsed.deletedTransactions ?? [],
+    debtAllocations: parsed.debtAllocations ?? [],
+  } as DenariusBackup;
 }

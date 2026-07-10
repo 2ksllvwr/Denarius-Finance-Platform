@@ -43,6 +43,7 @@ const NAV_GROUPS = [
     items: [
       { id: "dashboard" as Page, label: "Início", icon: IconDashboard },
       { id: "transactions" as Page, label: "Transações", icon: IconTransactions },
+      { id: "allocation" as Page, label: "Organizador de Dívidas", icon: IconWallet },
       { id: "insights" as Page, label: "Relatórios", icon: IconBarChart },
     ],
   },
@@ -62,6 +63,7 @@ const PAGE_SUBTITLE: Record<Page, string> = {
   monthly: "Metas, recorrências e fechamento",
   dashboard: "Resumo financeiro do período",
   transactions: "Histórico de movimentações",
+  allocation: "Organizador manual de dívidas",
   accounts: "Contas, carteiras e cartoes",
   categories: "Limites e categorias",
   billing: "Planos e assinatura",
