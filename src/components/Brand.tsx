@@ -10,6 +10,11 @@ const romanDStyle = {
   fontWeight: 400,
 };
 
+const brandFixStyle = {
+  fontFamily: "\"DenariusDisplayFix\", Georgia, serif",
+  fontWeight: 400,
+};
+
 export function BrandMark({ className, letterClassName }: BrandMarkProps) {
   return (
     <div className={cn("flex items-center justify-center font-bold select-none", className)}>
@@ -22,9 +27,11 @@ export function BrandName({ className }: { className?: string }) {
   return (
     <span
       aria-label="Denarius"
-      className={cn("font-brand inline-block leading-none tracking-normal select-none", className)}
+      className={cn("font-brand inline-flex items-baseline leading-none tracking-normal select-none", className)}
     >
-      Denarius
+      <span>Dena</span>
+      <span className="inline-block translate-y-[0.04em] scale-[0.94]" style={brandFixStyle}>r</span>
+      <span>ius</span>
     </span>
   );
 }
@@ -47,7 +54,9 @@ export function SidebarBrandName({ collapsed, className }: { collapsed: boolean;
         "font-brand text-[36px] leading-none transition-[max-width,opacity,transform] duration-300 ease-out",
         collapsed ? "max-w-0 translate-x-[-8px] opacity-0" : "max-w-[160px] translate-x-0 opacity-100",
       )}>
-        enarius
+        <span>ena</span>
+        <span className="inline-block translate-y-[0.04em] scale-[0.94]" style={brandFixStyle}>r</span>
+        <span>ius</span>
       </span>
     </span>
   );
