@@ -12,6 +12,7 @@ import {
   IconPlus,
   IconSettings,
   IconTrash,
+  IconTransactions,
   IconWallet,
 } from "@/components/Icons";
 import { ProfileAvatar } from "@/components/ProfileAvatar";
@@ -41,7 +42,7 @@ const NAV_GROUPS = [
     label: "Visão geral",
     items: [
       { id: "dashboard" as Page, label: "Início", icon: IconDashboard },
-      { id: "transactions" as Page, label: "Transações", icon: IconCalendar },
+      { id: "transactions" as Page, label: "Transações", icon: IconTransactions },
       { id: "insights" as Page, label: "Relatórios", icon: IconBarChart },
     ],
   },
