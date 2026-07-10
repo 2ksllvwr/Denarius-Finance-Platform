@@ -10,11 +10,6 @@ const romanDStyle = {
   fontWeight: 400,
 };
 
-const brandFixStyle = {
-  fontFamily: "Georgia, \"Times New Roman\", serif",
-  fontWeight: 700,
-};
-
 export function BrandMark({ className, letterClassName }: BrandMarkProps) {
   return (
     <div className={cn("flex items-center justify-center font-bold select-none", className)}>
@@ -30,7 +25,7 @@ export function BrandName({ className }: { className?: string }) {
       className={cn("font-brand inline-flex items-baseline leading-none tracking-normal select-none", className)}
     >
       <span>Dena</span>
-      <span className="inline-block translate-y-[-0.01em] scale-x-[0.88] scale-y-[0.92]" style={brandFixStyle}>r</span>
+      <span>R</span>
       <span>ius</span>
     </span>
   );
@@ -55,7 +50,7 @@ export function SidebarBrandName({ collapsed, className }: { collapsed: boolean;
         collapsed ? "max-w-0 translate-x-[-8px] opacity-0" : "max-w-[160px] translate-x-0 opacity-100",
       )}>
         <span>ena</span>
-        <span className="inline-block translate-y-[-0.01em] scale-x-[0.88] scale-y-[0.92]" style={brandFixStyle}>r</span>
+        <span>R</span>
         <span>ius</span>
       </span>
     </span>
