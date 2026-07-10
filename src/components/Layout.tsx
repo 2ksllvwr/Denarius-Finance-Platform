@@ -281,7 +281,7 @@ export function Layout({
   };
 
   return (
-    <div className="flex h-dvh bg-[#f7f8fa] font-sans antialiased overflow-hidden">
+    <div className="flex h-dvh bg-[linear-gradient(180deg,#f8fafc_0%,#f4f6f8_46%,#eef2f6_100%)] font-sans antialiased overflow-hidden">
       {mobileOpen && <div className="lg:hidden fixed inset-0 bg-black/45 z-40 animate-fade-in backdrop-blur-[2px]" onClick={() => setMobileOpen(false)} />}
 
       <aside className={cn(
@@ -313,13 +313,13 @@ export function Layout({
                       key={item.id}
                       onClick={() => goTo(item.id)}
                       className={cn(
-                        "relative w-full flex items-center gap-3 rounded-lg text-[13px] font-medium transition-colors",
+                        "relative w-full flex items-center gap-3 rounded-lg text-[13px] font-medium transition-all",
                         collapsed && !mobileOpen ? "justify-center px-0 py-3" : "px-3 py-2.5",
-                        active ? "bg-white/[0.10] text-white" : "text-white/55 hover:text-white hover:bg-white/[0.05]",
+                        active ? "bg-white/[0.12] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]" : "text-white/55 hover:text-white hover:bg-white/[0.05]",
                       )}
                       title={collapsed && !mobileOpen ? item.label : undefined}
                     >
-                      {active && <span className="absolute left-0 w-0.5 h-5 rounded-r bg-white" />}
+                      {active && <span className="absolute left-0 w-0.5 h-5 rounded-r bg-brand-500" />}
                       <item.icon size={18} className={active ? "text-white" : "text-white/45"} />
                       {(!collapsed || mobileOpen) && <span>{item.label}</span>}
                     </button>
@@ -349,7 +349,7 @@ export function Layout({
       </aside>
 
       <main className="flex-1 flex flex-col overflow-hidden min-w-0">
-        <header className="h-[72px] border-b border-border bg-white/92 backdrop-blur-xl flex items-center justify-between px-4 sm:px-6 flex-shrink-0 gap-3">
+        <header className="h-[72px] border-b border-border bg-white/88 backdrop-blur-xl flex items-center justify-between px-4 sm:px-6 flex-shrink-0 gap-3 shadow-[0_1px_0_rgba(15,23,42,0.02)]">
           <div className="flex items-center gap-3 min-w-0">
             <SidebarToggleButton
               open={mobileOpen}

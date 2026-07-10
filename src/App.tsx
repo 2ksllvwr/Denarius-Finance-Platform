@@ -110,6 +110,7 @@ export default function App() {
             categories={finance.categories}
             monthly={finance.monthly}
             currency={finance.settings.currency}
+            userName={finance.user.name}
             selectedMonthLabel={finance.selectedMonthLabel}
             onViewTransactions={() => setPage("transactions")}
             onNewTransaction={openNewTransaction}
