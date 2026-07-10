@@ -74,7 +74,7 @@ export default function App() {
     );
   }
 
-  if (!finance.settings.onboardingCompleted) {
+  if (!finance.settings.onboardingCompleted && !finance.workspaceLoading) {
     return (
       <OnboardingPage
         user={finance.user}

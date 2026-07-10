@@ -220,6 +220,7 @@ export function useFinanceApp() {
   const [locked, setLocked] = useState(() => Boolean(activeWorkspace.settings.pinHash));
   const [selectedMonth, setSelectedMonth] = useState(() => getMonthKey());
   const [loading, setLoading] = useState(Boolean(initialToken));
+  const [workspaceLoading, setWorkspaceLoading] = useState(Boolean(initialToken));
   const [error, setError] = useState<string | null>(null);
 
   const persistWorkspace = useCallback((workspace: Partial<WorkspaceData>, targetUser = user) => {
@@ -279,7 +280,9 @@ export function useFinanceApp() {
         setUser(null);
       })
       .finally(() => {
-        if (active) setLoading(false);
+        if (!active) return;
+        setLoading(false);
+        setWorkspaceLoading(false);
       });
     return () => { active = false; };
   }, [applyWorkspace, initialToken]);
@@ -387,7 +390,14 @@ export function useFinanceApp() {
       writeLocalStorage(TOKEN_KEY, response.token);
       setToken(response.token);
       setUser(response.user);
-      await loadWorkspace(response.token);
+      applyWorkspace(readWorkspace(response.user));
+      setWorkspaceLoading(true);
+      void loadWorkspace(response.token)
+        .catch(err => {
+          const message = err instanceof Error ? err.message : "Não foi possível carregar seus dados.";
+          setError(message);
+        })
+        .finally(() => setWorkspaceLoading(false));
     } catch (err) {
       const message = err instanceof Error ? err.message : "Falha ao fazer login.";
       setError(message);
@@ -395,7 +405,7 @@ export function useFinanceApp() {
     } finally {
       setLoading(false);
     }
-  }, [loadWorkspace]);
+  }, [applyWorkspace, loadWorkspace]);
 
   const register = useCallback(async (name: string, email: string, password: string, verificationToken: string) => {
     setLoading(true);
@@ -1087,7 +1097,12 @@ export function useFinanceApp() {
 
   const refresh = useCallback(async () => {
     if (!token) return;
-    await loadWorkspace(token);
+    setWorkspaceLoading(true);
+    try {
+      await loadWorkspace(token);
+    } finally {
+      setWorkspaceLoading(false);
+    }
   }, [loadWorkspace, token]);
 
   return {
@@ -1115,6 +1130,7 @@ export function useFinanceApp() {
     goToPreviousMonth,
     goToNextMonth,
     loading,
+    workspaceLoading,
     error,
     locked,
     login,
