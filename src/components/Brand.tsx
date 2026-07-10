@@ -43,16 +43,9 @@ export function SidebarBrandName({ collapsed, className }: { collapsed: boolean;
     >
       <span className={cn(
         "font-brand leading-none transition-transform duration-300 ease-out",
-        collapsed ? "translate-x-[3px] text-[34px]" : "translate-x-0 text-[36px]",
+        collapsed ? "translate-x-[3px] text-[34px]" : "max-w-0 opacity-0",
       )}>D</span>
-      <span className={cn(
-        "font-brand text-[36px] leading-none transition-[max-width,opacity,transform] duration-300 ease-out",
-        collapsed ? "max-w-0 translate-x-[-8px] opacity-0" : "max-w-[160px] translate-x-0 opacity-100",
-      )}>
-        <span>ena</span>
-        <span>r</span>
-        <span>ius</span>
-      </span>
+      {!collapsed && <BrandName className="text-[36px]" />}
     </span>
   );
 }
