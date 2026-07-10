@@ -264,9 +264,19 @@ export function AuthScreen({
                 )}
 
                 {isVerification && (
-                  <Field label="Codigo de verificacao">
-                    <input value={code} onChange={event => setCode(event.target.value.replace(/\D/g, "").slice(0, 6))} inputMode="numeric" autoComplete="one-time-code" placeholder="000000" required className="input-auth px-3 text-center text-xl font-semibold tracking-[0.3em] tabular-nums" />
-                  </Field>
+                  <>
+                    <div className="rounded-xl border border-warning-100 bg-warning-50 p-3 text-xs leading-5 text-warning-500">
+                      O e-mail pode cair na caixa de spam ou lixo eletronico. Confira essas pastas antes de pedir um novo codigo.
+                    </div>
+                    <Field label="Codigo de verificacao">
+                      <input value={code} onChange={event => setCode(event.target.value.replace(/\D/g, "").slice(0, 6))} inputMode="numeric" autoComplete="one-time-code" placeholder="000000" required className="input-auth px-3 text-center text-xl font-semibold tracking-[0.3em] tabular-nums" />
+                    </Field>
+                    <div className="flex justify-end">
+                      <button type="button" disabled={loading} onClick={resendCode} className="text-xs font-semibold text-gray-500 hover:text-gray-950 disabled:opacity-50">
+                        Reenviar codigo
+                      </button>
+                    </div>
+                  </>
                 )}
 
                 {mode === "login" && (
@@ -279,8 +289,6 @@ export function AuthScreen({
                 <button type="submit" disabled={loading} className={cn("w-full rounded-xl bg-gray-950 py-3 text-sm font-semibold text-white transition-all hover:bg-gray-800 active:scale-[0.99]", loading && "cursor-wait opacity-60")}>
                   {loading ? "Carregando..." : mode === "login" ? "Entrar" : mode === "register" ? "Enviar codigo" : mode === "forgot" ? "Recuperar senha" : isVerification ? "Confirmar codigo" : "Salvar nova senha"}
                 </button>
-
-                {isVerification && <button type="button" disabled={loading} onClick={resendCode} className="w-full py-1 text-xs font-semibold text-gray-400 hover:text-gray-800 disabled:opacity-50">Reenviar codigo</button>}
               </form>
             </div>
           </section>
